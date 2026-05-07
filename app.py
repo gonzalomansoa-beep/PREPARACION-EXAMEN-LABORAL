@@ -271,12 +271,13 @@ Carmen
 Odontología Sánchez · Gran Vía 42, Madrid
 📞 628 493 012 | Primera visita gratuita
 
-Tono: como si fuera un email personal de una persona real, cercana y experta. NUNCA suenes a plantilla. Máximo 10 líneas."""
+PROHIBIDO ABSOLUTAMENTE: No menciones IA, automatización, bot, sistema, respuesta automática, ni nada parecido. Eres Carmen, una persona real.
+Tono: email personal de alguien que ha leído de verdad el mensaje y le importa ayudar. NUNCA suenes a plantilla. Máximo 10 líneas."""
 
     try:
         respuesta_ia = llamar_gemini(
             [{"role": "user", "parts": [{"text": prompt_email}]}],
-            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. Nunca usas frases de plantilla. Siempre respondes al contenido específico del mensaje del paciente.",
+            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. NUNCA mencionas IA, automatización, bots ni sistemas automáticos. Eres una persona real que ha leído el mensaje y responde con empatía y conocimiento.",
             timeout=12,
         )
     except Exception as exc:
@@ -351,6 +352,45 @@ def health():
         "calendar": "conectado" if cal_ok else "pendiente",
         "email":    email_status,
     }, 200
+
+
+@app.route("/preview_email", methods=["POST"])
+def preview_email():
+    data = request.get_json(silent=True) or {}
+    nombre = data.get("nombre", "Test")
+    tratamiento = data.get("tratamiento", "")
+    mensaje = data.get("mensaje", "")
+    prompt = f"""Eres Carmen, recepcionista de Odontología Sánchez, clínica dental premium en Madrid.
+Has recibido este mensaje de un paciente a través de la web:
+
+Nombre: {nombre}
+Tratamiento de interés: {tratamiento or "No especificado"}
+Mensaje del paciente: {mensaje}
+
+Escribe una respuesta de email en español de España. Reglas estrictas:
+
+1. LEE el mensaje con atención y responde EXACTAMENTE a lo que pregunta o comenta. Si pregunta precio, da orientación. Si tiene miedo o dolor, muestra empatía primero. Si quiere info, dásela. Nunca ignores lo que dice.
+2. Empieza con "Hola {nombre}," y a continuación una frase cálida y personal relacionada con SU mensaje concreto (no un saludo genérico).
+3. Responde a su consulta de forma útil y específica. Si pregunta por un tratamiento, menciona algún detalle relevante (duración, proceso, resultado esperado). Si tiene dudas o miedo, tranquilízale.
+4. Invítale a llamar al 628 493 012 o contestar este email para dar el siguiente paso.
+5. Despídete de forma cercana y natural.
+6. Firma exactamente así:
+
+Carmen
+Odontología Sánchez · Gran Vía 42, Madrid
+📞 628 493 012 | Primera visita gratuita
+
+PROHIBIDO: No menciones IA, automatización, bot, sistema, ni nada parecido. Eres una persona real.
+Tono: como si fuera un email personal de una persona real, cercana y experta. NUNCA suenes a plantilla. Máximo 10 líneas."""
+    try:
+        texto = llamar_gemini(
+            [{"role": "user", "parts": [{"text": prompt}]}],
+            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. NUNCA mencionas IA, automatización ni sistemas.",
+            timeout=12,
+        )
+        return jsonify({"email": texto})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/", methods=["GET"])
