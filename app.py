@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import logging
@@ -30,7 +31,6 @@ def contacto_options():
 # ─── Credenciales ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODELS  = ["gemini-2.5-flash", "gemini-2.0-flash"]
-GEMINI_MODEL   = GEMINI_MODELS[0]
 
 def _gemini_url(model):
     return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
@@ -38,11 +38,11 @@ def _gemini_url(model):
 CALENDAR_ID       = "548fdbd91d1fe5f545da2d8c0c4cfebbcbf30c749a3527c9b25a79baaf9d25e2@group.calendar.google.com"
 GOOGLE_CREDS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
 
-GMAIL_USER   = os.environ.get("GMAIL_USER", "gonzalomansoa@gmail.com")
-BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+GMAIL_USER        = os.environ.get("GMAIL_USER", "gonzalomansoa@gmail.com")
+BREVO_API_KEY     = os.environ.get("BREVO_API_KEY", "")
 
-TELEFONO_CLINICA = "628 493 012"
-EMAIL_CLINICA    = "gonzalomansoa@gmail.com"
+TELEFONO_CLINICA  = "628 493 012"
+EMAIL_CLINICA     = "gonzalomansoa@gmail.com"
 
 # ─── Google Calendar ──────────────────────────────────────────────────────────
 _cal_service = None
@@ -71,7 +71,6 @@ def get_calendar_service():
 def crear_evento_calendario(nombre, tratamiento, fecha_iso, hora_iso):
     service = get_calendar_service()
     if not service:
-        log.warning("Calendar no disponible — cita guardada solo en WhatsApp")
         return False
     try:
         inicio = datetime.fromisoformat(f"{fecha_iso}T{hora_iso}:00")
@@ -84,7 +83,7 @@ def crear_evento_calendario(nombre, tratamiento, fecha_iso, hora_iso):
             "reminders":   {"useDefault": False, "overrides": [{"method": "email", "minutes": 60}]},
         }
         service.events().insert(calendarId=CALENDAR_ID, body=evento).execute()
-        log.info(f"✅ Evento Calendar creado: {nombre} | {tratamiento} | {fecha_iso} {hora_iso}")
+        log.info(f"✅ Evento Calendar: {nombre} | {tratamiento} | {fecha_iso} {hora_iso}")
         return True
     except Exception as exc:
         log.error(f"Error creando evento Calendar: {exc}")
@@ -125,11 +124,6 @@ Servicios y precios orientativos:
 • Sedación consciente: desde 100€
 • Endodoncia: desde 180€
 
-Planes anuales:
-• Plan Básico: primera visita gratis
-• Plan Mantenimiento: 149€/año (revisiones + limpiezas)
-• Plan Familiar: 299€/año hasta 4 miembros
-
 Normas de estilo:
 - Responde siempre en español de España
 - Mensajes cortos y naturales, máximo 3-4 líneas
@@ -140,59 +134,228 @@ Normas de estilo:
 conversaciones: dict = {}
 
 
-def llamar_gemini(historial: list, system: str = None, timeout: int = 12) -> str:
+def llamar_gemini(historial: list, system: str = None, timeout: int = 15) -> str:
     payload = {
         "system_instruction": {"parts": [{"text": system or SYSTEM_PROMPT}]},
         "contents": historial,
-        "generationConfig": {"temperature": 0.75, "maxOutputTokens": 350, "thinkingConfig": {"thinkingBudget": 0}},
+        "generationConfig": {
+            "temperature": 0.8,
+            "maxOutputTokens": 400,
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
     }
+    last_error = None
     for model in GEMINI_MODELS:
         for intento in range(2):
             try:
                 r = requests.post(_gemini_url(model), json=payload, timeout=timeout)
-                if r.status_code == 429 and intento == 0:
-                    time.sleep(2)
-                    continue
                 if r.status_code == 429:
-                    log.warning(f"Modelo {model} con rate limit, probando siguiente...")
+                    if intento == 0:
+                        time.sleep(3)
+                        continue
+                    log.warning(f"⚠️  {model} con cuota agotada, probando siguiente modelo...")
+                    last_error = "429"
                     break
                 r.raise_for_status()
-                return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                texto = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                log.info(f"✅ Gemini respondió con {model}")
+                return texto
             except requests.exceptions.Timeout:
+                log.warning(f"⚠️  {model} timeout intento {intento+1}")
                 if intento == 0:
                     continue
-                raise
-    raise RuntimeError("Todos los modelos Gemini sin respuesta")
+                last_error = "timeout"
+                break
+            except Exception as exc:
+                log.error(f"❌ {model} error: {exc}")
+                last_error = str(exc)
+                break
+    raise RuntimeError(f"Gemini no disponible: {last_error}")
 
 
 def extraer_datos_cita(texto_confirmacion: str, historial: list) -> dict | None:
     hoy = datetime.now().strftime("%A %d de %B de %Y")
-    prompt = f"""Hoy es {hoy} (mayo 2026). Analiza esta confirmación de cita dental y el historial de conversación.
-Devuelve UNICAMENTE un objeto JSON valido con estos campos exactos:
+    prompt = f"""Hoy es {hoy}. Analiza esta confirmación de cita dental y el historial.
+Devuelve UNICAMENTE un objeto JSON valido:
 {{
   "nombre": "nombre completo del paciente",
-  "tratamiento": "tipo de tratamiento solicitado",
-  "fecha_iso": "YYYY-MM-DD (fecha exacta calculada desde hoy)",
-  "hora_iso": "HH:MM (formato 24h)"
+  "tratamiento": "tipo de tratamiento",
+  "fecha_iso": "YYYY-MM-DD",
+  "hora_iso": "HH:MM"
 }}
 
 Confirmacion: {texto_confirmacion}
-Historial reciente: {json.dumps(historial[-8:], ensure_ascii=False)}
+Historial: {json.dumps(historial[-6:], ensure_ascii=False)}
 
-Responde SOLO con el JSON. Sin markdown, sin explicaciones."""
+Solo JSON, sin markdown."""
     try:
         respuesta = llamar_gemini(
             [{"role": "user", "parts": [{"text": prompt}]}],
-            system="Extractor de datos. Devuelves solo JSON valido sin ningun texto adicional.",
+            system="Extractor de datos. Devuelves solo JSON válido.",
             timeout=10,
         )
         limpio = respuesta.strip().strip("`").replace("json\n", "").replace("```", "").strip()
-        datos = json.loads(limpio)
-        log.info(f"Datos cita extraidos: {datos}")
-        return datos
+        return json.loads(limpio)
     except Exception as exc:
         log.error(f"Error extrayendo datos de cita: {exc}")
         return None
+
+
+# ─── Respuestas inteligentes de fallback ──────────────────────────────────────
+def respuesta_whatsapp_fallback(mensaje: str) -> str:
+    """Respuesta contextual cuando Gemini no está disponible."""
+    msg = mensaje.lower()
+
+    urgencia = any(w in msg for w in ["urgencia", "urgente", "dolor", "duele", "accidente", "roto", "rota", "sangra", "hinchado"])
+    cita     = any(w in msg for w in ["cita", "reservar", "pedir", "quiero", "cuando", "disponible", "hueco"])
+    precio   = any(w in msg for w in ["precio", "cuanto", "coste", "cuesta", "tarifa", "presupuesto"])
+    implante = any(w in msg for w in ["implante", "implantes", "diente perdido", "falta", "faltan"])
+    ortod    = any(w in msg for w in ["ortodoncia", "brackets", "invisalign", "dientes torcidos", "alineadores"])
+    blanq    = any(w in msg for w in ["blanquear", "blanqueamiento", "whiten", "color", "amarillo"])
+    nino     = any(w in msg for w in ["niño", "niña", "hijo", "hija", "infantil", "pediatria"])
+    saludo   = any(w in msg for w in ["hola", "buenas", "buenos", "hello", "info", "información"])
+
+    if urgencia:
+        return (
+            "¡Hola! Entiendo que tienes una urgencia. En Odontología Sánchez atendemos urgencias 24h. "
+            "Llámanos ahora al 628 493 012 y te atendemos de inmediato. 🦷"
+        )
+    if implante and precio:
+        return (
+            "¡Hola! Los implantes dentales en nuestra clínica tienen un precio orientativo desde 750€/unidad. "
+            "El proceso es muy cómodo, con anestesia local para que no sientas nada. "
+            "¿Quieres que te hagamos una valoración gratuita? Dime tu nombre y te reservo una visita. 🦷"
+        )
+    if ortod and precio:
+        return (
+            "¡Hola! Invisalign (ortodoncia invisible) tiene un precio orientativo desde 1.500€, "
+            "dependiendo del caso. Es ideal para adultos porque es casi imperceptible. "
+            "¿Te apetece una primera visita gratuita para ver qué necesitas? Dime tu nombre. 🦷"
+        )
+    if blanq:
+        return (
+            "¡Hola! El blanqueamiento dental profesional está desde 250€ y los resultados se notan desde la primera sesión. "
+            "¿Quieres que te reservemos una consulta gratuita para valorarlo? Dime tu nombre y cuándo te viene bien. 🦷"
+        )
+    if nino:
+        return (
+            "¡Hola! Atendemos a los más pequeños desde 40€. Tenemos un equipo especializado en odontopediatría "
+            "y sabemos cómo hacer que la visita al dentista sea una experiencia tranquila para ellos. "
+            "¿Quieres pedir cita? Dime el nombre del niño y cuándo os viene mejor. 🦷"
+        )
+    if precio:
+        return (
+            "¡Hola! Estos son nuestros precios orientativos:\n"
+            "• Revisión + limpieza: desde 60€\n"
+            "• Implantes: desde 750€/unidad\n"
+            "• Invisalign: desde 1.500€\n"
+            "• Blanqueamiento: desde 250€\n"
+            "• Carillas: desde 350€\n\n"
+            "La primera visita es siempre GRATUITA. ¿Te reservo una? 🦷"
+        )
+    if cita:
+        return (
+            "¡Hola! Con mucho gusto te reservo una cita. "
+            "Estamos disponibles lunes a viernes de 9:00 a 21:00 y sábados de 9:00 a 14:00. "
+            "¿Me dices tu nombre y qué día te viene mejor? 🦷"
+        )
+    if saludo:
+        return (
+            "¡Hola! Bienvenido a Odontología Sánchez. Soy Carmen y estoy aquí para ayudarte. "
+            "La primera visita es siempre gratuita. ¿En qué puedo ayudarte hoy? 🦷"
+        )
+    return (
+        "¡Hola! Soy Carmen de Odontología Sánchez. Puedo ayudarte con información sobre tratamientos, "
+        "precios o reservar una cita (primera visita gratuita). ¿Qué necesitas? 🦷"
+    )
+
+
+def email_fallback_inteligente(nombre: str, tratamiento: str, mensaje: str) -> str:
+    """Email personalizado cuando Gemini no está disponible."""
+    msg = mensaje.lower()
+    trat = tratamiento.lower() if tratamiento else ""
+
+    miedo    = any(w in msg for w in ["miedo", "nervios", "nervioso", "nerviosa", "asusta", "duele", "dolor", "doloroso"])
+    precio_q = any(w in msg for w in ["precio", "cuanto", "cuesta", "coste", "cuánto"])
+    urgente  = any(w in msg for w in ["urgencia", "urgente", "roto", "rota", "accidente", "sangra"])
+    nino     = any(w in msg for w in ["niño", "niña", "hijo", "hija", "infantil", "pequeño"])
+
+    apertura = f"Hola {nombre},"
+
+    if urgente:
+        cuerpo = (
+            f"{apertura}\n\n"
+            f"He leído tu mensaje y entiendo que es urgente. Por favor, llámanos ahora mismo al "
+            f"628 493 012 — atendemos urgencias las 24 horas y nos ocuparemos de ti enseguida.\n\n"
+            f"Si prefieres, también puedes contestar a este email y te respondo de inmediato.\n\n"
+            f"Un abrazo,\n\n"
+            f"Carmen\n"
+            f"Odontología Sánchez · Gran Vía 42, Madrid\n"
+            f"📞 628 493 012 | Primera visita gratuita"
+        )
+        return cuerpo
+
+    if miedo and ("implante" in trat or "implante" in msg):
+        detalle = (
+            "Entiendo perfectamente que el proceso de un implante pueda dar algo de respeto, "
+            "pero te cuento: se hace siempre con anestesia local, así que durante la intervención "
+            "no sentirás nada. Muchos de nuestros pacientes se sorprenden de lo cómodo que resulta. "
+            "La recuperación suele ser muy llevadera, con alguna molestia los primeros días que se controla bien con analgésicos."
+        )
+    elif miedo:
+        detalle = (
+            "Es muy normal sentir algo de nervios antes de una visita dental, y lo entendemos perfectamente. "
+            "En nuestra clínica trabajamos especialmente para que cada paciente se sienta tranquilo y cómodo. "
+            "Si lo necesitas, ofrecemos sedación consciente para que la experiencia sea lo más relajada posible."
+        )
+    elif "implante" in trat or "implante" in msg:
+        detalle = (
+            "Sobre los implantes, te cuento que en nuestra clínica el precio orientativo es desde 750€ por unidad. "
+            "El proceso se hace con anestesia local y es mucho más cómodo de lo que la gente imagina. "
+            "La recuperación completa lleva unos meses, pero en ese tiempo llevarás una corona provisional para que puedas hacer vida normal."
+        )
+    elif "invisalign" in trat or "ortodoncia" in trat or "invisalign" in msg or "ortodoncia" in msg:
+        detalle = (
+            "Sobre la ortodoncia invisible, te cuento que Invisalign es una opción estupenda: "
+            "los alineadores son prácticamente invisibles y se pueden quitar para comer. "
+            "El precio orientativo está desde 1.500€ dependiendo del caso. "
+            "La primera visita es gratuita y sin compromiso, así que podemos valorar exactamente qué necesitas."
+        )
+    elif "blanquea" in trat or "blanquea" in msg:
+        detalle = (
+            "El blanqueamiento dental profesional es un tratamiento muy sencillo y los resultados se notan muchísimo. "
+            "El precio orientativo está desde 250€ y el efecto dura bastante tiempo si se cuidan bien los dientes. "
+            "En la primera visita gratuita te explicamos todo en detalle."
+        )
+    elif nino:
+        detalle = (
+            "Tenemos un equipo especializado en odontopediatría que sabe muy bien cómo hacer "
+            "que los peques se sientan seguros y tranquilos. "
+            "La primera visita es gratuita y sin compromiso."
+        )
+    elif precio_q:
+        detalle = (
+            "Para darte un presupuesto exacto necesitamos hacer una valoración, "
+            "pero te puedo decir que nuestros precios son muy competitivos y "
+            "trabajamos con facilidades de pago. La primera visita es siempre gratuita."
+        )
+    else:
+        detalle = (
+            "Estaremos encantados de atenderte y resolver todas tus dudas en persona. "
+            "La primera visita es siempre gratuita y sin ningún compromiso."
+        )
+
+    cuerpo = (
+        f"{apertura}\n\n"
+        f"Gracias por escribirnos. {detalle}\n\n"
+        f"Si quieres dar el siguiente paso, puedes llamarnos al 628 493 012 o contestar a este mismo email "
+        f"y te reservamos una cita en el horario que mejor te venga.\n\n"
+        f"¡Hasta pronto!\n\n"
+        f"Carmen\n"
+        f"Odontología Sánchez · Gran Vía 42, Madrid\n"
+        f"📞 628 493 012 | Primera visita gratuita"
+    )
+    return cuerpo
 
 
 # ─── Webhook WhatsApp ──────────────────────────────────────────────────────────
@@ -229,13 +392,9 @@ def webhook():
         log.info(f"📤 [{numero}] ← {texto_respuesta[:80]}")
 
     except Exception as exc:
-        log.error(f"❌ Error procesando {numero}: {exc}")
+        log.warning(f"⚠️  Gemini no disponible para {numero}: {exc} — usando fallback inteligente")
         conversaciones[numero].pop()
-        texto_respuesta = (
-            f"Disculpa, tengo un pequeño problema técnico ahora mismo. "
-            f"Puedes llamarnos directamente al {TELEFONO_CLINICA} y te atendemos enseguida. "
-            f"¡Perdona las molestias! 🦷"
-        )
+        texto_respuesta = respuesta_whatsapp_fallback(mensaje_usuario)
 
     return twiml_response(texto_respuesta)
 
@@ -262,51 +421,42 @@ Nombre: {nombre}
 Tratamiento de interés: {tratamiento or "No especificado"}
 Mensaje del paciente: {mensaje}
 
-Escribe una respuesta de email en español de España. Reglas estrictas:
+Escribe una respuesta de email PERSONALIZADA en español de España. Reglas estrictas:
 
-1. LEE el mensaje con atención y responde EXACTAMENTE a lo que pregunta o comenta. Si pregunta precio, da orientación. Si tiene miedo o dolor, muestra empatía primero. Si quiere info, dásela. Nunca ignores lo que dice.
-2. Empieza con "Hola {nombre}," y a continuación una frase cálida y personal relacionada con SU mensaje concreto (no un saludo genérico).
-3. Responde a su consulta de forma útil y específica. Si pregunta por un tratamiento, menciona algún detalle relevante (duración, proceso, resultado esperado). Si tiene dudas o miedo, tranquilízale.
-4. Invítale a llamar al 628 493 012 o contestar este email para dar el siguiente paso.
-5. Despídete de forma cercana y natural.
-6. Firma exactamente así:
+1. LEE el mensaje con atención. Si pregunta precio → da orientación concreta. Si tiene miedo o dolor → muestra empatía primero. Si es urgencia → prioriza llamada. Nunca ignores lo que dice.
+2. Empieza con "Hola {nombre}," seguido de una frase cálida que refleje EXACTAMENTE lo que ha contado.
+3. Responde a su consulta con información útil y específica al tratamiento que menciona.
+4. Invítale a llamar al 628 493 012 o contestar este email.
+5. Despídete de forma cercana.
+6. Firma exactamente:
 
 Carmen
 Odontología Sánchez · Gran Vía 42, Madrid
 📞 628 493 012 | Primera visita gratuita
 
-PROHIBIDO ABSOLUTAMENTE: No menciones IA, automatización, bot, sistema, respuesta automática, ni nada parecido. Eres Carmen, una persona real.
-Tono: email personal de alguien que ha leído de verdad el mensaje y le importa ayudar. NUNCA suenes a plantilla. Máximo 10 líneas."""
+PROHIBIDO: No menciones IA, automatización, bot, sistema ni nada parecido. Eres Carmen, una persona real.
+Tono: email personal y cercano. NUNCA suenes a plantilla. Máximo 10 líneas."""
 
     try:
-        respuesta_ia = llamar_gemini(
+        respuesta = llamar_gemini(
             [{"role": "user", "parts": [{"text": prompt_email}]}],
-            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. NUNCA mencionas IA, automatización, bots ni sistemas automáticos. Eres una persona real que ha leído el mensaje y responde con empatía y conocimiento.",
-            timeout=12,
+            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. NUNCA mencionas IA ni automatización.",
+            timeout=15,
         )
+        log.info(f"✅ Email IA generado para {nombre}")
     except Exception as exc:
-        log.error(f"Error generando respuesta IA para email: {exc}")
-        tratamiento_ref = f" sobre {tratamiento}" if tratamiento else ""
-        respuesta_ia = (
-            f"Hola {nombre},\n\n"
-            f"Gracias por escribirnos{tratamiento_ref}. Hemos recibido tu mensaje y te responderemos en detalle lo antes posible.\n\n"
-            f"Si necesitas atención urgente, no dudes en llamarnos al 628 493 012 o contestar a este mismo email. Estaremos encantados de ayudarte.\n\n"
-            f"¡Hasta pronto!\n\n"
-            f"Carmen\n"
-            f"Odontología Sánchez · Gran Vía 42, Madrid\n"
-            f"📞 628 493 012 | Primera visita gratuita"
-        )
+        log.warning(f"⚠️  Gemini no disponible para email — usando fallback inteligente: {exc}")
+        respuesta = email_fallback_inteligente(nombre, tratamiento, mensaje)
 
-    # Emails en hilo de fondo para no bloquear la respuesta HTTP
     def _enviar_emails():
         enviar_email(
             EMAIL_CLINICA,
             f"Nuevo contacto web: {nombre} — {tratamiento or 'General'}",
-            f"Nombre: {nombre}\nEmail: {email}\nTelefono: {telefono}\nTratamiento: {tratamiento}\n\nMensaje:\n{mensaje}\n\n{'─'*40}\nRespuesta enviada al paciente:\n{respuesta_ia}",
+            f"Nombre: {nombre}\nEmail: {email}\nTelefono: {telefono}\nTratamiento: {tratamiento}\n\nMensaje:\n{mensaje}\n\n{'─'*40}\nRespuesta enviada al paciente:\n\n{respuesta}",
         )
-        exito = enviar_email(email, "Hemos recibido tu consulta — Odontologia Sanchez", respuesta_ia)
+        exito = enviar_email(email, "Hemos recibido tu consulta — Odontología Sánchez", respuesta)
         if exito:
-            log.info(f"✅ Auto-respuesta IA enviada a {email}")
+            log.info(f"✅ Respuesta enviada a {email}")
         else:
             log.warning(f"⚠️  No se pudo enviar email a {email}")
 
@@ -316,15 +466,12 @@ Tono: email personal de alguien que ha leído de verdad el mensaje y le importa 
 
 def enviar_email(destino: str, asunto: str, cuerpo: str) -> bool:
     if not BREVO_API_KEY:
-        log.warning("BREVO_API_KEY no configurado — email omitido")
+        log.warning("BREVO_API_KEY no configurado")
         return False
     try:
         resp = requests.post(
             "https://api.brevo.com/v3/smtp/email",
-            headers={
-                "api-key": BREVO_API_KEY,
-                "Content-Type": "application/json",
-            },
+            headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
             json={
                 "sender": {"name": "Odontología Sánchez", "email": GMAIL_USER},
                 "to": [{"email": destino}],
@@ -334,7 +481,7 @@ def enviar_email(destino: str, asunto: str, cuerpo: str) -> bool:
             timeout=10,
         )
         resp.raise_for_status()
-        log.info(f"📧 Email enviado → {destino}: {asunto}")
+        log.info(f"📧 Email → {destino}: {asunto}")
         return True
     except Exception as exc:
         log.error(f"❌ Email fallido → {destino}: {exc}")
@@ -353,52 +500,12 @@ def twiml_response(texto: str) -> Response:
 @app.route("/health", methods=["GET"])
 def health():
     cal_ok = get_calendar_service() is not None
-    email_status = "ok" if BREVO_API_KEY else "pendiente BREVO_API_KEY"
     return {
         "status":   "ok",
         "modelos":  GEMINI_MODELS,
         "calendar": "conectado" if cal_ok else "pendiente",
-        "email":    email_status,
+        "email":    "ok" if BREVO_API_KEY else "pendiente",
     }, 200
-
-
-@app.route("/preview_email", methods=["POST"])
-def preview_email():
-    data = request.get_json(silent=True) or {}
-    nombre = data.get("nombre", "Test")
-    tratamiento = data.get("tratamiento", "")
-    mensaje = data.get("mensaje", "")
-    prompt = f"""Eres Carmen, recepcionista de Odontología Sánchez, clínica dental premium en Madrid.
-Has recibido este mensaje de un paciente a través de la web:
-
-Nombre: {nombre}
-Tratamiento de interés: {tratamiento or "No especificado"}
-Mensaje del paciente: {mensaje}
-
-Escribe una respuesta de email en español de España. Reglas estrictas:
-
-1. LEE el mensaje con atención y responde EXACTAMENTE a lo que pregunta o comenta. Si pregunta precio, da orientación. Si tiene miedo o dolor, muestra empatía primero. Si quiere info, dásela. Nunca ignores lo que dice.
-2. Empieza con "Hola {nombre}," y a continuación una frase cálida y personal relacionada con SU mensaje concreto (no un saludo genérico).
-3. Responde a su consulta de forma útil y específica. Si pregunta por un tratamiento, menciona algún detalle relevante (duración, proceso, resultado esperado). Si tiene dudas o miedo, tranquilízale.
-4. Invítale a llamar al 628 493 012 o contestar este email para dar el siguiente paso.
-5. Despídete de forma cercana y natural.
-6. Firma exactamente así:
-
-Carmen
-Odontología Sánchez · Gran Vía 42, Madrid
-📞 628 493 012 | Primera visita gratuita
-
-PROHIBIDO: No menciones IA, automatización, bot, sistema, ni nada parecido. Eres una persona real.
-Tono: como si fuera un email personal de una persona real, cercana y experta. NUNCA suenes a plantilla. Máximo 10 líneas."""
-    try:
-        texto = llamar_gemini(
-            [{"role": "user", "parts": [{"text": prompt}]}],
-            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. NUNCA mencionas IA, automatización ni sistemas.",
-            timeout=12,
-        )
-        return jsonify({"email": texto})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/", methods=["GET"])
