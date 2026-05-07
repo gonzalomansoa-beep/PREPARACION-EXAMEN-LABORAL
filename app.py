@@ -82,8 +82,8 @@ def webhook():
 
     try:
         texto_respuesta = llamar_gemini(conversaciones[numero])
-    except Exception:
-        texto_respuesta = "Lo siento, ha ocurrido un error. Por favor llama al 628 493 012. 🦷"
+    except Exception as e:
+        texto_respuesta = f"ERROR DEBUG: {type(e).__name__}: {str(e)[:200]}"
 
     conversaciones[numero].append({
         "role": "model",
