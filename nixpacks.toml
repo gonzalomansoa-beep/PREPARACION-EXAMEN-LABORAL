@@ -1,8 +1,2 @@
-[phases.setup]
-nixPkgs = ["python311"]
-
-[phases.install]
-cmds = ["python3 -m pip install -r whatsapp_bot/requirements.txt"]
-
 [start]
-cmd = "cd whatsapp_bot && python3 -m gunicorn app:app"
+cmd = "cd whatsapp_bot && gunicorn app:app"
