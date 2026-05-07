@@ -1,0 +1,5 @@
+[phases.install]
+cmds = ["pip install -r whatsapp_bot/requirements.txt"]
+
+[start]
+cmd = "cd whatsapp_bot && gunicorn app:app"
