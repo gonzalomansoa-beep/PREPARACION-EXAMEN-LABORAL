@@ -251,27 +251,32 @@ def contacto():
 
     log.info(f"📧 Formulario web: {nombre} ({email}) — {tratamiento or 'sin especificar'}")
 
-    prompt_email = f"""Eres Carmen, recepcionista de Odontología Sánchez (clínica dental premium en Madrid).
-Un paciente ha enviado este mensaje desde nuestra web:
+    prompt_email = f"""Eres Carmen, recepcionista de Odontología Sánchez, clínica dental premium en Madrid.
+Has recibido este mensaje de un paciente a través de la web:
 
 Nombre: {nombre}
-Email del paciente: {email}
-Telefono: {telefono or "No facilitado"}
-Tratamiento de interes: {tratamiento or "No especificado"}
-Mensaje: {mensaje}
+Tratamiento de interés: {tratamiento or "No especificado"}
+Mensaje del paciente: {mensaje}
 
-Redacta una respuesta de email breve (maximo 6 lineas), calida y profesional en español de España.
-- Empieza directamente, sin "Estimado/a" ni saludos genericos
-- Usa el nombre del paciente de forma natural
-- Responde especificamente a su consulta
-- Invitale a llamar al 628 493 012 o responder el email para concertar cita
-- Firma: Carmen · Odontologia Sanchez · 628 493 012
-- Tono: cercano, experto, confiable. NO uses plantillas ni frases genericas."""
+Escribe una respuesta de email en español de España. Reglas estrictas:
+
+1. LEE el mensaje con atención y responde EXACTAMENTE a lo que pregunta o comenta. Si pregunta precio, da orientación. Si tiene miedo o dolor, muestra empatía primero. Si quiere info, dásela. Nunca ignores lo que dice.
+2. Empieza con "Hola {nombre}," y a continuación una frase cálida y personal relacionada con SU mensaje concreto (no un saludo genérico).
+3. Responde a su consulta de forma útil y específica. Si pregunta por un tratamiento, menciona algún detalle relevante (duración, proceso, resultado esperado). Si tiene dudas o miedo, tranquilízale.
+4. Invítale a llamar al 628 493 012 o contestar este email para dar el siguiente paso.
+5. Despídete de forma cercana y natural.
+6. Firma exactamente así:
+
+Carmen
+Odontología Sánchez · Gran Vía 42, Madrid
+📞 628 493 012 | Primera visita gratuita
+
+Tono: como si fuera un email personal de una persona real, cercana y experta. NUNCA suenes a plantilla. Máximo 10 líneas."""
 
     try:
         respuesta_ia = llamar_gemini(
             [{"role": "user", "parts": [{"text": prompt_email}]}],
-            system="Redactas emails breves, calidos y personalizados para una clinica dental premium.",
+            system="Eres Carmen, recepcionista humana de una clínica dental de élite. Escribes emails personales, cálidos y útiles. Nunca usas frases de plantilla. Siempre respondes al contenido específico del mensaje del paciente.",
             timeout=12,
         )
     except Exception as exc:
