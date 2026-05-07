@@ -7,7 +7,7 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
+    "gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY
 )
 
 SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
