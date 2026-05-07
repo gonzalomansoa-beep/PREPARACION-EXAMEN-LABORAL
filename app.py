@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from flask import Flask, request, Response
 
@@ -59,9 +60,14 @@ def llamar_gemini(historial):
         },
         "contents": historial
     }
-    r = requests.post(GEMINI_URL, json=payload, timeout=30)
+    for intento in range(3):
+        r = requests.post(GEMINI_URL, json=payload, timeout=30)
+        if r.status_code == 429:
+            time.sleep(5 * (intento + 1))
+            continue
+        r.raise_for_status()
+        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
     r.raise_for_status()
-    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 @app.route("/webhook", methods=["POST"])
@@ -82,8 +88,8 @@ def webhook():
 
     try:
         texto_respuesta = llamar_gemini(conversaciones[numero])
-    except Exception as e:
-        texto_respuesta = f"ERROR DEBUG: {type(e).__name__}: {str(e)[:200]}"
+    except Exception:
+        texto_respuesta = "Lo siento, ha ocurrido un error. Por favor llama al 628 493 012. 🦷"
 
     conversaciones[numero].append({
         "role": "model",
