@@ -1,80 +1,100 @@
 import os
-from flask import Flask, request
-from twilio.twiml.messaging_response import MessagingResponse
-import google.generativeai as genai
+import json
+import time
+import requests
+from flask import Flask, request, Response
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+# --- CONFIGURACIÓN ---
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+CALENDAR_ID = os.environ.get("CALENDAR_ID", "")
 
-SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
-Tu objetivo es atender a los pacientes de forma amable, recoger sus datos para pedir cita y resolver dudas.
+# --- LÓGICA DE GOOGLE CALENDAR ---
+def agendar_en_google(datos_cita):
+    try:
+        info_servicio = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON", "{}"))
+        creds = service_account.Credentials.from_service_account_info(
+            info_servicio, scopes=['https://www.googleapis.com/auth/calendar']
+        )
+        service = build('calendar', 'v3', credentials=creds)
 
-Cuando alguien quiera pedir cita, recoge en orden:
-1. Nombre completo
-2. Tratamiento que necesita (revisión, blanqueamiento, ortodoncia, implantes, etc.)
-3. Día y hora preferida
+        evento = {
+            'summary': f"CITA: {datos_cita['nombre']} - {datos_cita['tratamiento']}",
+            'location': 'Calle Gran Vía, 42, Madrid',
+            'description': f"Tratamiento: {datos_cita['tratamiento']}\nAgendado por el Bot Dental.",
+            'start': {'dateTime': datos_cita['inicio'], 'timeZone': 'Europe/Madrid'},
+            'end': {'dateTime': datos_cita['fin'], 'timeZone': 'Europe/Madrid'},
+        }
 
-Una vez tengas los 3 datos confirma así:
-"✅ ¡Cita confirmada! Te esperamos el [día] a las [hora] para [tratamiento]. Te llamaremos al número registrado para confirmar. ¡Hasta pronto! 🦷"
+        service.events().insert(calendarId=CALENDAR_ID, body=evento).execute()
+        return True
+    except Exception as e:
+        print(f"Error en Calendar: {e}")
+        return False
 
-Información de la clínica:
-- Dirección: Calle Gran Vía, 42, Madrid 28013
-- Teléfono: 628 493 012
-- Horario: Lunes-Viernes 9:00-21:00 | Sábados 9:00-14:00
-- Urgencias: 24 horas, 365 días
-- Primera visita: GRATUITA
-- Servicios y precios:
-  * Ortodoncia invisible: desde 1.500€
-  * Blanqueamiento dental: desde 250€
-  * Implantes dentales: desde 750€/unidad
-  * Carillas de porcelana: desde 350€/unidad
-  * Odontopediatría: desde 40€
-  * Sedación consciente: desde 100€
-- Planes: Básico (primera visita gratis), Mantenimiento Anual (149€/año), Familiar (299€/año hasta 4 personas)
+# --- LÓGICA DE IA ---
+def llamar_gemini(historial, extra_prompt=None):
+    prompt_sistema = """Eres el asistente de Odontología Sánchez. 
+    Tu objetivo es agendar citas pidiendo: Nombre, Tratamiento y Día/Hora.
+    Cuando tengas los 3 datos, confirma con: '✅ ¡Cita confirmada! Te esperamos el [día] a las [hora] para [tratamiento].'"""
+    
+    if extra_prompt: # Usado para extraer datos estructurados
+        payload = {"contents": [{"parts": [{"text": extra_prompt}]}]}
+    else:
+        payload = {
+            "system_instruction": {"parts": [{"text": prompt_sistema}]},
+            "contents": historial
+        }
 
-Responde siempre en español, de forma cercana y profesional. Usa emojis con moderación.
-Mantén las respuestas cortas (máximo 3-4 líneas).
-Nunca inventes datos médicos ni des diagnósticos."""
+    r = requests.post(GEMINI_URL, json=payload)
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
-# Historial de conversaciones por número de teléfono
+def procesar_confirmacion(texto_bot):
+    # Pedimos a Gemini que convierta el texto amigable en datos para el calendario
+    prompt_extraccion = f"""Extrae los datos de esta confirmación: "{texto_bot}"
+    Responde SOLAMENTE un JSON con este formato:
+    {{"nombre": "...", "tratamiento": "...", "inicio": "ISO_DATETIME", "fin": "ISO_DATETIME"}}
+    Nota: La cita dura 1 hora. Hoy es 2026. Formato ISO: YYYY-MM-DDTHH:MM:SS"""
+    
+    try:
+        respuesta_json = llamar_gemini([], extra_prompt=prompt_extraccion)
+        # Limpiar posibles bloques de código markdown
+        clean_json = respuesta_json.replace("```json", "").replace("```", "").strip()
+        datos = json.loads(clean_json)
+        return agendar_en_google(datos)
+    except:
+        return False
+
+# --- WEBHOOK TWILIO ---
 conversaciones = {}
-
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     numero = request.form.get("From", "")
     mensaje_usuario = request.form.get("Body", "").strip()
+    
+    if numero not in conversaciones: conversaciones[numero] = []
+    conversaciones[numero].append({"role": "user", "parts": [{"text": mensaje_usuario}]})
 
-    if not mensaje_usuario:
-        return str(MessagingResponse())
+    try:
+        respuesta = llamar_gemini(conversaciones[numero])
+        conversaciones[numero].append({"role": "model", "parts": [{"text": respuesta}]})
+        
+        # Si el bot confirma la cita, la enviamos al calendario
+        if "✅ ¡Cita confirmada!" in respuesta:
+            procesar_confirmacion(respuesta)
 
-    if numero not in conversaciones:
-        conversaciones[numero] = []
+        root = f"<Response><Message>{respuesta}</Message></Response>"
+        return Response(root, mimetype="text/xml")
+    except Exception:
+        return Response("<Response><Message>Error técnico, llámanos.</Message></Response>", mimetype="text/xml")
 
-    historial = conversaciones[numero]
-
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=SYSTEM_PROMPT
-    )
-
-    chat = model.start_chat(history=historial)
-    respuesta = chat.send_message(mensaje_usuario)
-    texto_respuesta = respuesta.text
-
-    conversaciones[numero] = list(chat.history)
-
-    resp = MessagingResponse()
-    resp.message(texto_respuesta)
-    return str(resp)
-
-
-@app.route("/", methods=["GET"])
-def home():
-    return "🦷 Bot Odontología Sánchez activo."
-
+@app.route("/")
+def home(): return "🦷 Bot Dental con Google Calendar Activo."
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
