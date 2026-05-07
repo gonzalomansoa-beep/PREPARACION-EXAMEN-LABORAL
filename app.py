@@ -298,7 +298,7 @@ Tono: email personal de alguien que ha leído de verdad el mensaje y le importa 
         enviar_email(
             EMAIL_CLINICA,
             f"Nuevo contacto web: {nombre} — {tratamiento or 'General'}",
-            f"Nombre: {nombre}\nEmail: {email}\nTelefono: {telefono}\nTratamiento: {tratamiento}\n\nMensaje:\n{mensaje}\n\n{'─'*40}\nRespuesta IA enviada:\n{respuesta_ia}",
+            f"Nombre: {nombre}\nEmail: {email}\nTelefono: {telefono}\nTratamiento: {tratamiento}\n\nMensaje:\n{mensaje}\n\n{'─'*40}\nRespuesta enviada al paciente:\n{respuesta_ia}",
         )
         exito = enviar_email(email, "Hemos recibido tu consulta — Odontologia Sanchez", respuesta_ia)
         if exito:
