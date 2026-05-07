@@ -34,6 +34,7 @@ exports.handler = async (event) => {
     req.on("error", (e) => {
       resolve({
         statusCode: 500,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ok: false, error: e.message }),
       });
     });
@@ -41,8 +42,12 @@ exports.handler = async (event) => {
     req.setTimeout(25000, () => {
       req.destroy();
       resolve({
-        statusCode: 200,
-        body: JSON.stringify({ ok: true }),
+        statusCode: 504,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ok: false,
+          error: "El servidor tardó demasiado en responder. Inténtalo de nuevo.",
+        }),
       });
     });
 

@@ -1,6 +1,12 @@
 [build]
   functions = "netlify/functions"
 
+[functions]
+  timeout = 26
+
+[functions."keepalive"]
+  schedule = "*/5 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
