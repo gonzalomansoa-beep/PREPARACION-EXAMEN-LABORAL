@@ -1,12 +1,15 @@
 import os
+import requests
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from google import genai
-from google.genai import types
 
 app = Flask(__name__)
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
+)
 
 SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
 Tu objetivo es atender a los pacientes de forma amable, recoger sus datos para pedir cita y resolver dudas.
@@ -41,6 +44,18 @@ Nunca inventes datos médicos ni des diagnósticos."""
 conversaciones = {}
 
 
+def llamar_gemini(historial):
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": SYSTEM_PROMPT}]
+        },
+        "contents": historial
+    }
+    r = requests.post(GEMINI_URL, json=payload, timeout=30)
+    r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     numero = request.form.get("From", "")
@@ -52,25 +67,20 @@ def webhook():
     if numero not in conversaciones:
         conversaciones[numero] = []
 
-    historial = list(conversaciones[numero])
-    historial.append(types.Content(role="user", parts=[types.Part(text=mensaje_usuario)]))
+    conversaciones[numero].append({
+        "role": "user",
+        "parts": [{"text": mensaje_usuario}]
+    })
 
-    response = client.models.generate_content(
-        model="gemini-1.5-flash",
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-        ),
-        contents=historial,
-    )
+    try:
+        texto_respuesta = llamar_gemini(conversaciones[numero])
+    except Exception as e:
+        texto_respuesta = "Lo siento, ha ocurrido un error. Por favor llama al 628 493 012. 🦷"
 
-    texto_respuesta = response.text
-
-    conversaciones[numero].append(
-        types.Content(role="user", parts=[types.Part(text=mensaje_usuario)])
-    )
-    conversaciones[numero].append(
-        types.Content(role="model", parts=[types.Part(text=texto_respuesta)])
-    )
+    conversaciones[numero].append({
+        "role": "model",
+        "parts": [{"text": texto_respuesta}]
+    })
 
     resp = MessagingResponse()
     resp.message(texto_respuesta)
