@@ -2,12 +2,9 @@ import os
 import json
 import time
 import logging
-import smtplib
 import requests
 import threading
 from datetime import datetime, timedelta
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from flask import Flask, request, Response, jsonify
 
 logging.basicConfig(
@@ -41,8 +38,8 @@ GEMINI_URL     = (
 CALENDAR_ID       = "548fdbd91d1fe5f545da2d8c0c4cfebbcbf30c749a3527c9b25a79baaf9d25e2@group.calendar.google.com"
 GOOGLE_CREDS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
 
-GMAIL_USER         = os.environ.get("GMAIL_USER", "gonzalomansoa@gmail.com")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+GMAIL_USER   = os.environ.get("GMAIL_USER", "gonzalomansoa@gmail.com")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 
 TELEFONO_CLINICA = "628 493 012"
 EMAIL_CLINICA    = "gonzalomansoa@gmail.com"
@@ -304,18 +301,25 @@ Redacta una respuesta de email breve (maximo 6 lineas), calida y profesional en 
 
 
 def enviar_email(destino: str, asunto: str, cuerpo: str) -> bool:
-    if not GMAIL_APP_PASSWORD:
-        log.warning("GMAIL_APP_PASSWORD no configurado — email omitido")
+    if not BREVO_API_KEY:
+        log.warning("BREVO_API_KEY no configurado — email omitido")
         return False
     try:
-        msg = MIMEMultipart()
-        msg["From"]    = f"Odontologia Sanchez <{GMAIL_USER}>"
-        msg["To"]      = destino
-        msg["Subject"] = asunto
-        msg.attach(MIMEText(cuerpo, "plain", "utf-8"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as srv:
-            srv.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            srv.send_message(msg)
+        resp = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": BREVO_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "sender": {"name": "Odontología Sánchez", "email": GMAIL_USER},
+                "to": [{"email": destino}],
+                "subject": asunto,
+                "textContent": cuerpo,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
         log.info(f"📧 Email enviado → {destino}: {asunto}")
         return True
     except Exception as exc:
@@ -335,17 +339,7 @@ def twiml_response(texto: str) -> Response:
 @app.route("/health", methods=["GET"])
 def health():
     cal_ok = get_calendar_service() is not None
-    # Test SMTP login real
-    email_status = "sin contrasena"
-    if GMAIL_APP_PASSWORD:
-        try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=8) as srv:
-                srv.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            email_status = "ok"
-        except smtplib.SMTPAuthenticationError:
-            email_status = "error_auth - contrasena incorrecta"
-        except Exception as exc:
-            email_status = f"error - {exc}"
+    email_status = "ok" if BREVO_API_KEY else "pendiente BREVO_API_KEY"
     return {
         "status":   "ok",
         "modelo":   GEMINI_MODEL,
