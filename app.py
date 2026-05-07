@@ -18,7 +18,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app, origins=["https://gonzalomansoa-beep.github.io", "https://odontologia-sanchez.netlify.app", "https://odontologiasanchez.es", "http://localhost"])
+CORS(app)
 
 # ─── Credenciales ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
