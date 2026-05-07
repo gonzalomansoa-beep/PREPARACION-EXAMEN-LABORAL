@@ -1,124 +1,94 @@
 import os
+import json
 import time
 import requests
 from flask import Flask, request, Response
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
+# --- CONFIGURACIÓN ---
+# Usamos gemini-2.5-flash que es el que te funcionaba antes
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY
-)
+MODELO = "gemini-2.5-flash" 
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODELO}:generateContent?key={GEMINI_API_KEY}"
+CALENDAR_ID = os.environ.get("CALENDAR_ID", "")
 
-SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
-Tu objetivo es atender a los pacientes de forma amable, recoger sus datos para pedir cita y resolver dudas.
+def agendar_en_google(datos_cita):
+    try:
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON", "{}")
+        info_servicio = json.loads(creds_json)
+        creds = service_account.Credentials.from_service_account_info(
+            info_servicio, scopes=['https://www.googleapis.com/auth/calendar']
+        )
+        service = build('calendar', 'v3', credentials=creds)
 
-Cuando alguien quiera pedir cita, recoge en orden:
-1. Nombre completo
-2. Tratamiento que necesita (revisión, blanqueamiento, ortodoncia, implantes, etc.)
-3. Día y hora preferida
+        evento = {
+            'summary': f"CITA: {datos_cita.get('nombre', 'Paciente')} - {datos_cita.get('tratamiento', 'Consulta')}",
+            'description': 'Agendado automáticamente por Bot Dental.',
+            'start': {'dateTime': datos_cita['inicio'], 'timeZone': 'Europe/Madrid'},
+            'end': {'dateTime': datos_cita['fin'], 'timeZone': 'Europe/Madrid'},
+        }
 
-Una vez tengas los 3 datos confirma así:
-"✅ ¡Cita confirmada! Te esperamos el [día] a las [hora] para [tratamiento]. Te llamaremos al número registrado para confirmar. ¡Hasta pronto! 🦷"
+        service.events().insert(calendarId=CALENDAR_ID, body=evento).execute()
+        return True
+    except Exception as e:
+        print(f"❌ Error Calendar: {e}")
+        return False
 
-Información de la clínica:
-- Dirección: Calle Gran Vía, 42, Madrid 28013
-- Teléfono: 628 493 012
-- Horario: Lunes-Viernes 9:00-21:00 | Sábados 9:00-14:00
-- Urgencias: 24 horas, 365 días
-- Primera visita: GRATUITA
-- Servicios y precios:
-  * Ortodoncia invisible: desde 1.500€
-  * Blanqueamiento dental: desde 250€
-  * Implantes dentales: desde 750€/unidad
-  * Carillas de porcelana: desde 350€/unidad
-  * Odontopediatría: desde 40€
-  * Sedación consciente: desde 100€
-- Planes: Básico (primera visita gratis), Mantenimiento Anual (149€/año), Familiar (299€/año hasta 4 personas)
+def llamar_gemini(historial, es_extraccion=False):
+    prompt_sistema = "Eres el asistente de Odontología Sánchez. Agenda citas pidiendo Nombre, Tratamiento y Día/Hora. Confirma con: '✅ ¡Cita confirmada!'"
+    
+    if es_extraccion:
+        # Prompt para convertir texto en JSON para el calendario
+        payload = {"contents": historial}
+    else:
+        payload = {
+            "system_instruction": {"parts": [{"text": prompt_sistema}]},
+            "contents": historial
+        }
 
-Responde siempre en español, de forma cercana y profesional. Usa emojis con moderación.
-Mantén las respuestas cortas (máximo 3-4 líneas).
-Nunca inventes datos médicos ni des diagnósticos."""
-
-conversaciones = {}
-
-
-def twiml_response(texto):
-    import xml.etree.ElementTree as ET
-    root = ET.Element("Response")
-    msg = ET.SubElement(root, "Message")
-    msg.text = texto
-    xml_str = '<?xml version="1.0" encoding="UTF-8"?>' + ET.tostring(root, encoding="unicode")
-    return Response(xml_str, mimetype="text/xml")
-
-
-MENSAJE_ERROR = (
-    "Lo siento, estoy teniendo problemas técnicos en este momento. "
-    "Por favor llámanos al 628 493 012 o escríbenos a gonzalomansoa@gmail.com. 🦷"
-)
-
-
-def llamar_gemini(historial):
-    payload = {
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-        "contents": historial
-    }
-    for intento in range(2):
-        try:
-            r = requests.post(GEMINI_URL, json=payload, timeout=12)
-            if r.status_code == 429 and intento == 0:
-                time.sleep(3)
-                continue
-            r.raise_for_status()
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        except requests.exceptions.Timeout:
-            if intento == 0:
-                time.sleep(1)
-                continue
-            raise
-    raise Exception("Sin respuesta tras reintentos")
-
+    r = requests.post(GEMINI_URL, json=payload, timeout=10)
+    r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     numero = request.form.get("From", "")
     mensaje_usuario = request.form.get("Body", "").strip()
-
-    if not mensaje_usuario:
-        return twiml_response("")
-
-    if numero not in conversaciones:
-        conversaciones[numero] = []
-
-    conversaciones[numero].append({
-        "role": "user",
-        "parts": [{"text": mensaje_usuario}]
-    })
+    
+    if not mensaje_usuario: return Response("<Response/>", mimetype="text/xml")
+    
+    if numero not in conversaciones: conversaciones[numero] = []
+    conversaciones[numero].append({"role": "user", "parts": [{"text": mensaje_usuario}]})
 
     try:
-        texto_respuesta = llamar_gemini(conversaciones[numero])
-        conversaciones[numero].append({
-            "role": "model",
-            "parts": [{"text": texto_respuesta}]
-        })
-    except Exception:
-        conversaciones[numero].pop()
-        texto_respuesta = MENSAJE_ERROR
+        # 1. Obtener respuesta de la IA
+        respuesta = llamar_gemini(conversaciones[numero])
+        conversaciones[numero].append({"role": "model", "parts": [{"text": respuesta}]})
+        
+        # 2. Si hay confirmación, intentamos agendar (en segundo plano)
+        if "✅ ¡Cita confirmada!" in respuesta:
+            try:
+                # Pedimos a la IA que nos dé el JSON de esa última respuesta
+                prompt_json = f"Transforma esto en JSON: '{respuesta}'. Hoy es 2026. JSON con: nombre, tratamiento, inicio (ISO), fin (ISO)."
+                datos_raw = llamar_gemini([{"role": "user", "parts": [{"text": prompt_json}]}], es_extraccion=True)
+                clean_json = datos_raw.replace("```json", "").replace("```", "").strip()
+                agendar_en_google(json.loads(clean_json))
+            except Exception as e:
+                print(f"⚠️ No se pudo agendar pero el bot seguirá: {e}")
 
-    return twiml_response(texto_respuesta)
+        return Response(f"<Response><Message>{respuesta}</Message></Response>", mimetype="text/xml")
+    
+    except Exception as e:
+        print(f"🔥 ERROR CRÍTICO: {e}")
+        return Response("<Response><Message>Lo siento, tengo un problema técnico. Llámanos al 628 493 012. 🦷</Message></Response>", mimetype="text/xml")
 
+conversaciones = {}
 
-@app.route("/health", methods=["GET"])
-def health():
-    return {"status": "ok", "modelo": "gemini-2.5-flash"}, 200
-
-
-@app.route("/", methods=["GET"])
-def home():
-    return "🦷 Bot Odontología Sánchez activo."
-
+@app.route("/")
+def home(): return "Bot Dental Activo"
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
