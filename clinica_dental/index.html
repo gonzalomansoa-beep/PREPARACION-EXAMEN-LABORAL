@@ -631,7 +631,7 @@
           <div class="info-icon">📞</div>
           <div>
             <strong>Teléfono</strong>
-            <span>91 234 56 78 · Urgencias 24h: 600 123 456</span>
+            <span><a href="tel:+34912345678" style="color:inherit;">91 234 56 78</a> · Urgencias: <a href="tel:+34600123456" style="color:inherit;">600 123 456</a></span>
           </div>
         </div>
         <div class="info-item">
@@ -651,18 +651,19 @@
       </div>
     </div>
     <div class="reveal">
-      <form onsubmit="enviarForm(event)">
+      <!-- Cambia YOUR_FORM_ID por tu ID de formspree.io -->
+      <form action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
         <div class="form-group">
           <label>Nombre completo</label>
-          <input type="text" placeholder="Tu nombre" required />
+          <input type="text" name="nombre" placeholder="Tu nombre" required />
         </div>
         <div class="form-group">
           <label>Teléfono</label>
-          <input type="tel" placeholder="600 000 000" required />
+          <input type="tel" name="telefono" placeholder="600 000 000" required />
         </div>
         <div class="form-group">
           <label>Tratamiento de interés</label>
-          <select>
+          <select name="tratamiento">
             <option>Primera visita gratuita</option>
             <option>Ortodoncia</option>
             <option>Implantes</option>
@@ -673,16 +674,34 @@
         </div>
         <div class="form-group">
           <label>¿Cuándo prefieres la cita?</label>
-          <input type="date" />
+          <input type="date" name="fecha" />
         </div>
         <div class="form-group">
           <label>Mensaje (opcional)</label>
-          <textarea placeholder="Cuéntanos brevemente tu caso..."></textarea>
+          <textarea name="mensaje" placeholder="Cuéntanos brevemente tu caso..."></textarea>
         </div>
         <button type="submit" class="btn-submit">Enviar solicitud de cita ✨</button>
       </form>
     </div>
   </div>
+</section>
+
+<!-- RESERVA ONLINE -->
+<section id="reserva" style="background:#f0f4ff; padding:5rem 2rem; text-align:center;">
+  <div class="section-tag">Reserva en 1 minuto</div>
+  <h2 class="section-title" style="margin-bottom:0.5rem;">Elige tu hora directamente</h2>
+  <p class="section-sub" style="margin:0 auto 2rem;">Sin llamadas, sin esperas. Selecciona el día y hora que mejor te venga.</p>
+  <!-- Cambia la URL por la de tu Calendly -->
+  <div style="max-width:900px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(10,36,99,0.1);">
+    <iframe src="https://calendly.com/TU_USUARIO/primera-visita"
+      width="100%" height="650px" frameborder="0"
+      style="border:none;background:white;">
+    </iframe>
+  </div>
+  <p style="margin-top:1.5rem;color:#6b7280;font-size:0.85rem;">
+    ¿Prefieres llamar? <a href="tel:+34912345678" style="color:#0a2463;font-weight:600;">91 234 56 78</a>
+    · También por <a href="https://wa.me/34600123456" style="color:#25d366;font-weight:600;">WhatsApp</a>
+  </p>
 </section>
 
 <!-- FOOTER -->
