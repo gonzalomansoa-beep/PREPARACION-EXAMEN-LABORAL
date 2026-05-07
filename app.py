@@ -8,7 +8,7 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY
+    "gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY
 )
 
 SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
@@ -60,14 +60,9 @@ def llamar_gemini(historial):
         },
         "contents": historial
     }
-    for intento in range(3):
-        r = requests.post(GEMINI_URL, json=payload, timeout=30)
-        if r.status_code == 429:
-            time.sleep(5 * (intento + 1))
-            continue
-        r.raise_for_status()
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    r = requests.post(GEMINI_URL, json=payload, timeout=10)
     r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
 @app.route("/webhook", methods=["POST"])
