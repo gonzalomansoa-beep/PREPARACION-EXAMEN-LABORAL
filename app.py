@@ -335,11 +335,22 @@ def twiml_response(texto: str) -> Response:
 @app.route("/health", methods=["GET"])
 def health():
     cal_ok = get_calendar_service() is not None
+    # Test SMTP login real
+    email_status = "sin contrasena"
+    if GMAIL_APP_PASSWORD:
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=8) as srv:
+                srv.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            email_status = "ok"
+        except smtplib.SMTPAuthenticationError:
+            email_status = "error_auth - contrasena incorrecta"
+        except Exception as exc:
+            email_status = f"error - {exc}"
     return {
         "status":   "ok",
         "modelo":   GEMINI_MODEL,
-        "calendar": "conectado" if cal_ok else "pendiente GOOGLE_CREDENTIALS_JSON",
-        "email":    "configurado" if GMAIL_APP_PASSWORD else "pendiente GMAIL_APP_PASSWORD",
+        "calendar": "conectado" if cal_ok else "pendiente",
+        "email":    email_status,
     }, 200
 
 
