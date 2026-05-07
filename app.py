@@ -1,7 +1,6 @@
 import os
 import requests
-from flask import Flask, request
-from twilio.twiml.messaging_response import MessagingResponse
+from flask import Flask, request, Response
 
 app = Flask(__name__)
 
@@ -44,6 +43,15 @@ Nunca inventes datos médicos ni des diagnósticos."""
 conversaciones = {}
 
 
+def twiml_response(texto):
+    import xml.etree.ElementTree as ET
+    root = ET.Element("Response")
+    msg = ET.SubElement(root, "Message")
+    msg.text = texto
+    xml_str = '<?xml version="1.0" encoding="UTF-8"?>' + ET.tostring(root, encoding="unicode")
+    return Response(xml_str, mimetype="text/xml")
+
+
 def llamar_gemini(historial):
     payload = {
         "system_instruction": {
@@ -62,7 +70,7 @@ def webhook():
     mensaje_usuario = request.form.get("Body", "").strip()
 
     if not mensaje_usuario:
-        return str(MessagingResponse())
+        return twiml_response("")
 
     if numero not in conversaciones:
         conversaciones[numero] = []
@@ -74,7 +82,7 @@ def webhook():
 
     try:
         texto_respuesta = llamar_gemini(conversaciones[numero])
-    except Exception as e:
+    except Exception:
         texto_respuesta = "Lo siento, ha ocurrido un error. Por favor llama al 628 493 012. 🦷"
 
     conversaciones[numero].append({
@@ -82,9 +90,7 @@ def webhook():
         "parts": [{"text": texto_respuesta}]
     })
 
-    resp = MessagingResponse()
-    resp.message(texto_respuesta)
-    return str(resp)
+    return twiml_response(texto_respuesta)
 
 
 @app.route("/", methods=["GET"])
