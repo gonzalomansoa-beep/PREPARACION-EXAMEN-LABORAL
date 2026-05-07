@@ -41,12 +41,6 @@ Nunca inventes datos médicos ni des diagnósticos."""
 conversaciones = {}
 
 
-def construir_historial(numero, mensaje_nuevo):
-    historial = conversaciones.get(numero, [])
-    historial.append(types.Content(role="user", parts=[types.Part(text=mensaje_nuevo)]))
-    return historial
-
-
 @app.route("/webhook", methods=["POST"])
 def webhook():
     numero = request.form.get("From", "")
@@ -58,14 +52,15 @@ def webhook():
     if numero not in conversaciones:
         conversaciones[numero] = []
 
-    contents = construir_historial(numero, mensaje_usuario)
+    historial = list(conversaciones[numero])
+    historial.append(types.Content(role="user", parts=[types.Part(text=mensaje_usuario)]))
 
     response = client.models.generate_content(
         model="gemini-1.5-flash",
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
         ),
-        contents=contents,
+        contents=historial,
     )
 
     texto_respuesta = response.text
