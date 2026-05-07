@@ -1,12 +1,14 @@
 import os
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-from anthropic import Anthropic
+import google.generativeai as genai
 
 app = Flask(__name__)
-client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-# Guarda el historial de cada conversación por número de teléfono
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+# Historial de conversaciones por número
 conversaciones = {}
 
 SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
@@ -17,7 +19,7 @@ Cuando alguien quiera pedir cita, recoge en orden:
 2. Tratamiento que necesita (revisión, blanqueamiento, ortodoncia, implantes, etc.)
 3. Día y hora preferida
 
-Una vez tengas los 3 datos, confirma la cita con un mensaje así:
+Una vez tengas los 3 datos confirma así:
 "✅ ¡Cita confirmada! Te esperamos el [día] a las [hora] para [tratamiento]. Te llamaremos al [número] para confirmar. ¡Hasta pronto! 🦷"
 
 Información de la clínica:
@@ -28,10 +30,9 @@ Información de la clínica:
 - Primera visita: GRATUITA
 - Servicios: Ortodoncia invisible, blanqueamiento, implantes, carillas, odontopediatría, sedación
 
-Responde siempre en español, de forma cercana y profesional. Usa emojis con moderación 🦷✨
-Si preguntan por precios, diles que depende del caso y que la primera visita es gratuita para valorarlo.
-Nunca inventes datos médicos ni des diagnósticos.
-Mantén las respuestas cortas (máximo 3-4 líneas)."""
+Responde siempre en español, de forma cercana y profesional. Usa emojis con moderación.
+Mantén las respuestas cortas (máximo 3-4 líneas).
+Nunca inventes datos médicos ni des diagnósticos."""
 
 
 @app.route("/webhook", methods=["POST"])
@@ -40,29 +41,17 @@ def webhook():
     mensaje_usuario = request.form.get("Body", "").strip()
 
     if numero not in conversaciones:
-        conversaciones[numero] = []
+        conversaciones[numero] = model.start_chat(history=[])
 
-    conversaciones[numero].append({
-        "role": "user",
-        "content": mensaje_usuario
-    })
+    chat = conversaciones[numero]
 
-    # Limitar historial a últimos 20 mensajes para no pasarse de tokens
-    historial = conversaciones[numero][-20:]
-
-    respuesta = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=300,
-        system=SYSTEM_PROMPT,
-        messages=historial
+    respuesta = chat.send_message(
+        f"[CONTEXTO DEL ASISTENTE: {SYSTEM_PROMPT}]\n\nPaciente dice: {mensaje_usuario}"
+        if len(chat.history) == 0
+        else mensaje_usuario
     )
 
-    texto_respuesta = respuesta.content[0].text
-
-    conversaciones[numero].append({
-        "role": "assistant",
-        "content": texto_respuesta
-    })
+    texto_respuesta = respuesta.text
 
     resp = MessagingResponse()
     resp.message(texto_respuesta)
@@ -71,7 +60,7 @@ def webhook():
 
 @app.route("/", methods=["GET"])
 def home():
-    return "🦷 Bot de Odontología Sánchez funcionando correctamente."
+    return "🦷 Bot Odontología Sánchez funcionando."
 
 
 if __name__ == "__main__":
