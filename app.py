@@ -1,11 +1,12 @@
 import os
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 app = Flask(__name__)
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 SYSTEM_PROMPT = """Eres el asistente virtual de Odontología Sánchez, una clínica dental en Madrid.
 Tu objetivo es atender a los pacientes de forma amable, recoger sus datos para pedir cita y resolver dudas.
@@ -40,6 +41,12 @@ Nunca inventes datos médicos ni des diagnósticos."""
 conversaciones = {}
 
 
+def construir_historial(numero, mensaje_nuevo):
+    historial = conversaciones.get(numero, [])
+    historial.append(types.Content(role="user", parts=[types.Part(text=mensaje_nuevo)]))
+    return historial
+
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     numero = request.form.get("From", "")
@@ -51,17 +58,27 @@ def webhook():
     if numero not in conversaciones:
         conversaciones[numero] = []
 
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=SYSTEM_PROMPT
+    contents = construir_historial(numero, mensaje_usuario)
+
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+        ),
+        contents=contents,
     )
 
-    chat = model.start_chat(history=conversaciones[numero])
-    respuesta = chat.send_message(mensaje_usuario)
-    conversaciones[numero] = list(chat.history)
+    texto_respuesta = response.text
+
+    conversaciones[numero].append(
+        types.Content(role="user", parts=[types.Part(text=mensaje_usuario)])
+    )
+    conversaciones[numero].append(
+        types.Content(role="model", parts=[types.Part(text=texto_respuesta)])
+    )
 
     resp = MessagingResponse()
-    resp.message(respuesta.text)
+    resp.message(texto_respuesta)
     return str(resp)
 
 
