@@ -3,157 +3,138 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Odontología Sánchez</title>
+  <title>Odontología Sánchez · Clínica Dental Madrid</title>
+  <meta name="description" content="Clínica dental en Madrid. Ortodoncia, implantes, blanqueamiento. Primera visita gratuita.">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&family=Playfair+Display:wght@700&display=swap');
-    :root {
-      --azul: #0a2463; --menta: #3ce8d0; --blanco: #f8faff;
-      --gris: #6b7280; --degradado: linear-gradient(135deg, #0a2463 0%, #1e5f8e 50%, #3ce8d0 100%);
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { font-family: 'Poppins', sans-serif; background: var(--blanco); color: #1a1a2e; overflow-x: hidden; }
-    nav { position: fixed; top: 0; width: 100%; z-index: 999; padding: 1.2rem 2rem; display: flex; justify-content: space-between; align-items: center; background: rgba(10,36,99,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(60,232,208,0.2); transition: all 0.3s; }
-    .logo { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: white; }
-    .logo span { color: var(--menta); }
-    .nav-links { display: flex; gap: 2rem; list-style: none; }
-    .nav-links a { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.3s; position: relative; }
-    .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: var(--menta); transition: width 0.3s; }
-    .nav-links a:hover { color: var(--menta); }
-    .nav-links a:hover::after { width: 100%; }
-    #hero { min-height: 100vh; background: var(--degradado); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; text-align: center; padding: 6rem 2rem 4rem; }
-    .bubbles { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; }
-    .bubble { position: absolute; border-radius: 50%; background: rgba(60,232,208,0.08); border: 1px solid rgba(60,232,208,0.15); animation: float 8s ease-in-out infinite; }
-    .bubble:nth-child(1) { width:300px; height:300px; top:-80px; left:-60px; animation-delay:0s; }
-    .bubble:nth-child(2) { width:200px; height:200px; top:60%; right:-40px; animation-delay:2s; }
-    .bubble:nth-child(3) { width:150px; height:150px; bottom:10%; left:20%; animation-delay:4s; }
-    .bubble:nth-child(4) { width:80px; height:80px; top:30%; right:25%; animation-delay:1s; }
-    .bubble:nth-child(5) { width:120px; height:120px; top:15%; left:40%; animation-delay:3s; }
-    @keyframes float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-20px) scale(1.03); } }
-    .hero-content { position: relative; z-index: 2; max-width: 780px; }
-    .hero-badge { display: inline-block; background: rgba(60,232,208,0.15); border: 1px solid var(--menta); color: var(--menta); font-size: 0.8rem; padding: 0.4rem 1.2rem; border-radius: 20px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1.5rem; animation: fadeDown 0.8s ease both; }
-    .hero-title { font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 6vw, 5rem); color: white; line-height: 1.1; margin-bottom: 1.5rem; animation: fadeDown 0.8s ease 0.2s both; }
-    .hero-title span { color: var(--menta); }
-    .hero-sub { font-size: 1.1rem; color: rgba(255,255,255,0.75); line-height: 1.8; margin-bottom: 2.5rem; animation: fadeDown 0.8s ease 0.4s both; }
-    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; animation: fadeDown 0.8s ease 0.6s both; }
-    .btn-primary { background: var(--menta); color: var(--azul); padding: 1rem 2.5rem; border-radius: 50px; font-weight: 700; font-size: 1rem; text-decoration: none; border: none; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 20px rgba(60,232,208,0.4); }
-    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(60,232,208,0.5); }
-    .btn-outline { background: transparent; color: white; padding: 1rem 2.5rem; border-radius: 50px; font-weight: 600; font-size: 1rem; text-decoration: none; border: 2px solid rgba(255,255,255,0.4); transition: all 0.3s; }
-    .btn-outline:hover { border-color: var(--menta); color: var(--menta); }
-    .hero-stats { display: flex; gap: 3rem; justify-content: center; margin-top: 4rem; flex-wrap: wrap; animation: fadeUp 0.8s ease 0.8s both; }
-    .stat { text-align: center; }
-    .stat-num { font-size: 2.5rem; font-weight: 900; color: var(--menta); line-height: 1; }
-    .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-top: 0.3rem; }
-    @keyframes fadeDown { from { opacity:0; transform: translateY(-20px); } to { opacity:1; transform: translateY(0); } }
-    @keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
-    section { padding: 6rem 2rem; }
-    .section-tag { text-transform: uppercase; letter-spacing: 3px; font-size: 0.8rem; color: var(--menta); font-weight: 600; margin-bottom: 0.8rem; }
-    .section-title { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 4vw, 3rem); color: var(--azul); line-height: 1.2; margin-bottom: 1rem; }
-    .section-sub { color: var(--gris); font-size: 1rem; line-height: 1.8; max-width: 550px; }
-    .center { text-align: center; }
-    .center .section-sub { margin: 0 auto; }
-    #servicios { background: #f0f4ff; }
-    .servicios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 3.5rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
-    .servicio-card { background: white; border-radius: 20px; padding: 2.5rem 2rem; box-shadow: 0 4px 20px rgba(10,36,99,0.06); transition: transform 0.3s, box-shadow 0.3s; position: relative; overflow: hidden; cursor: default; }
-    .servicio-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--degradado); transform: scaleX(0); transition: transform 0.3s; }
-    .servicio-card:hover { transform: translateY(-8px); box-shadow: 0 16px 40px rgba(10,36,99,0.12); }
-    .servicio-card:hover::before { transform: scaleX(1); }
-    .servicio-icon { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, #e8f4fd, #d0f0eb); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 1.5rem; }
-    .servicio-card h3 { font-size: 1.2rem; color: var(--azul); margin-bottom: 0.8rem; }
-    .servicio-card p { color: var(--gris); font-size: 0.92rem; line-height: 1.7; }
-    .servicio-precio { margin-top: 1.5rem; font-weight: 700; color: var(--menta); font-size: 1rem; }
-    #nosotros { background: white; display: flex; align-items: center; }
-    .nosotros-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
-    .nosotros-visual { position: relative; }
-    .nosotros-img-box { width: 100%; aspect-ratio: 1; border-radius: 30px; background: var(--degradado); display: flex; align-items: center; justify-content: center; font-size: 8rem; box-shadow: 0 20px 60px rgba(10,36,99,0.25); }
-    .nosotros-badge { position: absolute; bottom: -20px; right: -20px; background: var(--menta); color: var(--azul); font-weight: 900; font-size: 1.1rem; padding: 1.2rem 1.8rem; border-radius: 20px; box-shadow: 0 8px 24px rgba(60,232,208,0.4); }
-    .nosotros-badge small { display: block; font-weight: 400; font-size: 0.75rem; }
-    .features { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.2rem; }
-    .feature { display: flex; align-items: flex-start; gap: 1rem; }
-    .feature-icon { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #e8f4fd, #d0f0eb); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
-    .feature h4 { color: var(--azul); font-size: 1rem; margin-bottom: 0.2rem; }
-    .feature p { color: var(--gris); font-size: 0.88rem; line-height: 1.6; }
-    #testimonios { background: var(--azul); }
-    #testimonios .section-title { color: white; }
-    #testimonios .section-tag { color: var(--menta); }
-    .testimonios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 3rem; max-width: 1100px; margin-left: auto; margin-right: auto; }
-    .testimonio { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 2rem; transition: transform 0.3s; }
-    .testimonio:hover { transform: translateY(-5px); background: rgba(255,255,255,0.1); }
-    .estrellas { color: #ffd700; font-size: 1.1rem; margin-bottom: 1rem; }
-    .testimonio p { color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 0.95rem; font-style: italic; }
-    .testimonio-autor { display: flex; align-items: center; gap: 1rem; margin-top: 1.5rem; }
-    .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--degradado); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; font-size: 1rem; }
-    .autor-info strong { color: white; display: block; font-size: 0.95rem; }
-    .autor-info span { color: rgba(255,255,255,0.5); font-size: 0.8rem; }
-    #precios { background: #f0f4ff; }
-    .precios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 3rem; max-width: 1000px; margin-left: auto; margin-right: auto; }
-    .precio-card { background: white; border-radius: 24px; padding: 2.5rem 2rem; text-align: center; box-shadow: 0 4px 20px rgba(10,36,99,0.06); transition: transform 0.3s; position: relative; overflow: hidden; }
-    .precio-card.destacado { background: var(--degradado); color: white; transform: scale(1.05); box-shadow: 0 20px 50px rgba(10,36,99,0.25); }
-    .precio-card:not(.destacado):hover { transform: translateY(-6px); }
-    .plan-badge { display: inline-block; background: var(--menta); color: var(--azul); font-size: 0.75rem; font-weight: 700; padding: 0.3rem 1rem; border-radius: 20px; margin-bottom: 1.5rem; letter-spacing: 1px; text-transform: uppercase; }
-    .plan-nombre { font-size: 1.3rem; font-weight: 700; margin-bottom: 1rem; }
-    .precio-card:not(.destacado) .plan-nombre { color: var(--azul); }
-    .precio-num { font-size: 3.5rem; font-weight: 900; line-height: 1; }
-    .precio-card:not(.destacado) .precio-num { color: var(--azul); }
-    .precio-num sup { font-size: 1.5rem; vertical-align: top; margin-top: 0.8rem; display: inline-block; }
-    .precio-periodo { font-size: 0.85rem; opacity: 0.7; margin-bottom: 2rem; }
-    .precio-lista { list-style: none; margin-bottom: 2rem; text-align: left; }
-    .precio-lista li { padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid rgba(10,36,99,0.06); display: flex; align-items: center; gap: 0.7rem; }
-    .precio-card.destacado .precio-lista li { border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); }
-    .precio-lista li::before { content: '✓'; color: var(--menta); font-weight: 700; }
-    #contacto { background: white; }
-    .contacto-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; }
-    .contacto-info { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem; }
-    .info-item { display: flex; align-items: flex-start; gap: 1rem; }
-    .info-icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #e8f4fd, #d0f0eb); display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
-    .info-item strong { color: var(--azul); display: block; margin-bottom: 0.2rem; }
-    .info-item span { color: var(--gris); font-size: 0.9rem; line-height: 1.6; }
-    form { margin-top: 2rem; display: flex; flex-direction: column; gap: 1.2rem; }
-    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-    label { font-size: 0.85rem; font-weight: 600; color: var(--azul); }
-    input, textarea, select { border: 2px solid #e8edf5; border-radius: 12px; padding: 0.9rem 1.1rem; font-family: 'Poppins', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.3s; background: #f8faff; }
-    input:focus, textarea:focus, select:focus { border-color: var(--menta); background: white; }
-    textarea { resize: vertical; min-height: 120px; }
-    .btn-submit { background: var(--degradado); color: white; border: none; border-radius: 50px; padding: 1rem 2rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity 0.3s, transform 0.2s; box-shadow: 0 8px 24px rgba(10,36,99,0.25); }
-    .btn-submit:hover { opacity: 0.9; transform: translateY(-2px); }
-    footer { background: #060d1f; color: rgba(255,255,255,0.6); text-align: center; padding: 2.5rem; font-size: 0.9rem; }
-    footer strong { color: var(--menta); }
-    .whatsapp-btn { position: fixed; bottom: 2rem; right: 2rem; z-index: 998; width: 60px; height: 60px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; text-decoration: none; box-shadow: 0 6px 20px rgba(37,211,102,0.5); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { box-shadow: 0 6px 20px rgba(37,211,102,0.5); } 50% { box-shadow: 0 6px 40px rgba(37,211,102,0.8); } }
-    @media (max-width: 768px) { .nosotros-inner { grid-template-columns: 1fr; gap: 3rem; } .contacto-inner { grid-template-columns: 1fr; gap: 2rem; } .nav-links { display: none; } .precio-card.destacado { transform: scale(1); } .nosotros-badge { right: 0; bottom: -10px; } }
-    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
+    :root { --azul:#0a2463;--menta:#3ce8d0;--blanco:#f8faff;--gris:#6b7280;--degradado:linear-gradient(135deg,#0a2463 0%,#1e5f8e 50%,#3ce8d0 100%); }
+    *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Poppins',sans-serif;background:var(--blanco);color:#1a1a2e;overflow-x:hidden}
+    nav{position:fixed;top:0;width:100%;z-index:999;padding:1.2rem 2rem;display:flex;justify-content:space-between;align-items:center;background:rgba(10,36,99,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(60,232,208,0.2);transition:padding .3s}
+    .logo{font-family:'Playfair Display',serif;font-size:1.5rem;color:white;text-decoration:none}.logo span{color:var(--menta)}
+    .nav-links{display:flex;gap:1.5rem;list-style:none}.nav-links a{color:rgba(255,255,255,0.85);text-decoration:none;font-size:.85rem;font-weight:500;transition:color .3s}.nav-links a:hover{color:var(--menta)}
+    .btn-nav{background:var(--menta);color:var(--azul)!important;padding:.55rem 1.3rem;border-radius:50px;font-weight:700!important}
+    #hero{min-height:100vh;background:var(--degradado);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;text-align:center;padding:7rem 2rem 4rem}
+    .bubble{position:absolute;border-radius:50%;background:rgba(60,232,208,0.07);border:1px solid rgba(60,232,208,0.12);animation:flotar 8s ease-in-out infinite}
+    .b1{width:320px;height:320px;top:-80px;left:-80px;animation-delay:0s}.b2{width:200px;height:200px;top:55%;right:-50px;animation-delay:2s}.b3{width:140px;height:140px;bottom:8%;left:15%;animation-delay:4s}.b4{width:90px;height:90px;top:25%;right:20%;animation-delay:1s}
+    @keyframes flotar{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
+    .hero-content{position:relative;z-index:2;max-width:780px}
+    .hero-badge{display:inline-block;background:rgba(60,232,208,0.15);border:1px solid var(--menta);color:var(--menta);font-size:.75rem;padding:.4rem 1.2rem;border-radius:20px;letter-spacing:2px;text-transform:uppercase;margin-bottom:1.5rem}
+    .hero-title{font-family:'Playfair Display',serif;font-size:clamp(2.4rem,6vw,5rem);color:white;line-height:1.1;margin-bottom:1.4rem}.hero-title span{color:var(--menta)}
+    .hero-sub{font-size:1.05rem;color:rgba(255,255,255,0.75);line-height:1.8;margin-bottom:2.5rem}
+    .hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+    .btn-primary{background:var(--menta);color:var(--azul);padding:1rem 2.2rem;border-radius:50px;font-weight:700;font-size:.95rem;text-decoration:none;border:none;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 20px rgba(60,232,208,0.4);display:inline-block}
+    .btn-primary:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(60,232,208,0.5)}
+    .btn-outline{background:transparent;color:white;padding:1rem 2.2rem;border-radius:50px;font-weight:600;font-size:.95rem;text-decoration:none;border:2px solid rgba(255,255,255,0.4);transition:all .3s;display:inline-block}
+    .btn-outline:hover{border-color:var(--menta);color:var(--menta)}
+    .stat-num{font-size:2.4rem;font-weight:900;color:var(--menta);line-height:1}.stat-label{font-size:.8rem;color:rgba(255,255,255,0.6);margin-top:.3rem}
+    section{padding:6rem 2rem}
+    .section-tag{text-transform:uppercase;letter-spacing:3px;font-size:.75rem;color:var(--menta);font-weight:600;margin-bottom:.8rem}
+    .section-title{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);color:var(--azul);line-height:1.2;margin-bottom:1rem}
+    .section-sub{color:var(--gris);font-size:.95rem;line-height:1.8;max-width:550px}
+    .center{text-align:center}.center .section-sub{margin:0 auto}
+    #servicios{background:#f0f4ff}
+    .servicios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1.5rem;margin-top:3rem;max-width:1200px;margin-left:auto;margin-right:auto}
+    .servicio-card{background:white;border-radius:20px;padding:2rem 1.8rem;box-shadow:0 4px 20px rgba(10,36,99,0.06);transition:transform .3s,box-shadow .3s;position:relative;overflow:hidden}
+    .servicio-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--degradado);transform:scaleX(0);transition:transform .3s}
+    .servicio-card:hover{transform:translateY(-7px);box-shadow:0 14px 36px rgba(10,36,99,0.11)}.servicio-card:hover::before{transform:scaleX(1)}
+    .servicio-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#e8f4fd,#d0f0eb);display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin-bottom:1.2rem}
+    .servicio-card h3{font-size:1.1rem;color:var(--azul);margin-bottom:.6rem}.servicio-card p{color:var(--gris);font-size:.88rem;line-height:1.7}
+    .servicio-precio{margin-top:1.2rem;font-weight:700;color:var(--menta);font-size:.95rem}
+    #nosotros{background:white}
+    .nosotros-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center}
+    .nosotros-img-box{width:100%;aspect-ratio:1;border-radius:28px;background:var(--degradado);display:flex;align-items:center;justify-content:center;font-size:7rem;box-shadow:0 20px 60px rgba(10,36,99,0.2);position:relative}
+    .nosotros-badge{position:absolute;bottom:-15px;right:-15px;background:var(--menta);color:var(--azul);font-weight:900;font-size:1rem;padding:1rem 1.5rem;border-radius:18px;box-shadow:0 6px 20px rgba(60,232,208,0.4)}
+    .nosotros-badge small{display:block;font-weight:400;font-size:.7rem}
+    .features{margin-top:2rem;display:flex;flex-direction:column;gap:1rem}
+    .feature{display:flex;align-items:flex-start;gap:.9rem}
+    .feature-icon{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#e8f4fd,#d0f0eb);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+    .feature h4{color:var(--azul);font-size:.95rem;margin-bottom:.2rem}.feature p{color:var(--gris);font-size:.84rem;line-height:1.6}
+    #testimonios{background:var(--azul)}#testimonios .section-title{color:white}
+    .testimonios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-top:3rem;max-width:1100px;margin-left:auto;margin-right:auto}
+    .testimonio{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:1.8rem;transition:transform .3s}
+    .testimonio:hover{transform:translateY(-5px);background:rgba(255,255,255,0.12)}
+    .estrellas{color:#ffd700;margin-bottom:.8rem}.testimonio p{color:rgba(255,255,255,0.85);line-height:1.8;font-size:.92rem;font-style:italic}
+    .testimonio-autor{display:flex;align-items:center;gap:.9rem;margin-top:1.3rem}
+    .avatar{width:42px;height:42px;border-radius:50%;background:var(--degradado);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:.9rem}
+    .autor-info strong{color:white;display:block;font-size:.9rem}.autor-info span{color:rgba(255,255,255,0.5);font-size:.78rem}
+    #precios{background:#f0f4ff}
+    .precios-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;max-width:980px;margin-left:auto;margin-right:auto}
+    .precio-card{background:white;border-radius:22px;padding:2.2rem 1.8rem;text-align:center;box-shadow:0 4px 20px rgba(10,36,99,0.06);transition:transform .3s}
+    .precio-card.destacado{background:var(--degradado);color:white;transform:scale(1.04);box-shadow:0 18px 48px rgba(10,36,99,0.2)}
+    .precio-card:not(.destacado):hover{transform:translateY(-5px)}
+    .plan-badge{display:inline-block;background:var(--menta);color:var(--azul);font-size:.72rem;font-weight:700;padding:.28rem .9rem;border-radius:20px;margin-bottom:1.2rem;letter-spacing:1px;text-transform:uppercase}
+    .plan-nombre{font-size:1.2rem;font-weight:700;margin-bottom:.8rem;color:var(--azul)}.precio-card.destacado .plan-nombre{color:white}
+    .precio-num{font-size:3.2rem;font-weight:900;line-height:1;color:var(--azul)}.precio-card.destacado .precio-num{color:white}
+    .precio-num sup{font-size:1.3rem;vertical-align:top;margin-top:.7rem;display:inline-block}
+    .precio-periodo{font-size:.82rem;opacity:.65;margin-bottom:1.8rem}
+    .precio-lista{list-style:none;margin-bottom:1.8rem;text-align:left}
+    .precio-lista li{padding:.45rem 0;font-size:.87rem;border-bottom:1px solid rgba(10,36,99,0.06);display:flex;align-items:center;gap:.6rem}
+    .precio-card.destacado .precio-lista li{border-color:rgba(255,255,255,0.1);color:rgba(255,255,255,0.9)}
+    .precio-lista li::before{content:'✓';color:var(--menta);font-weight:700}
+    #reserva{background:white}
+    .reserva-inner{max-width:900px;margin:0 auto}
+    .reserva-opciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin-top:3rem}
+    .reserva-card{border-radius:20px;padding:2.2rem;text-align:center;transition:transform .3s;cursor:pointer;text-decoration:none;display:block}
+    .reserva-card:hover{transform:translateY(-6px)}
+    .reserva-card.whatsapp{background:#e8fdf2;border:2px solid #25d366}
+    .reserva-card.telefono{background:#e8f0ff;border:2px solid var(--azul)}
+    .reserva-card.email{background:#f0faff;border:2px solid var(--menta)}
+    .reserva-icono{font-size:3rem;margin-bottom:1rem;display:block}
+    .reserva-card h3{font-size:1.1rem;font-weight:700;margin-bottom:.5rem}
+    .reserva-card.whatsapp h3{color:#128c5e}.reserva-card.telefono h3{color:var(--azul)}.reserva-card.email h3{color:#0077aa}
+    .reserva-card p{font-size:.88rem;color:var(--gris);line-height:1.6}
+    .reserva-card strong{display:block;margin-top:.8rem;font-size:1rem}
+    .reserva-card.whatsapp strong{color:#25d366}.reserva-card.telefono strong{color:var(--azul)}.reserva-card.email strong{color:#0077aa}
+    .horario-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-top:2rem;max-width:650px;margin-left:auto;margin-right:auto}
+    .horario-item{background:white;border-radius:14px;padding:1.2rem;text-align:center;box-shadow:0 2px 12px rgba(10,36,99,0.06)}
+    .horario-dia{font-weight:700;color:var(--azul);font-size:.88rem}.horario-hora{color:var(--gris);font-size:.83rem;margin-top:.3rem}
+    #contacto{background:#f0f4ff}
+    .contacto-inner{max-width:700px;margin:0 auto}
+    .contact-form{background:white;border-radius:24px;padding:2.5rem;box-shadow:0 8px 30px rgba(10,36,99,0.08);margin-top:2.5rem}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    .form-group{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem}
+    label{font-size:.82rem;font-weight:600;color:var(--azul)}
+    input,textarea,select{border:2px solid #e8edf5;border-radius:12px;padding:.85rem 1rem;font-family:'Poppins',sans-serif;font-size:.92rem;outline:none;transition:border-color .3s;background:#f8faff;width:100%}
+    input:focus,textarea:focus,select:focus{border-color:var(--menta);background:white}
+    textarea{resize:vertical;min-height:110px}
+    .btn-submit{background:var(--degradado);color:white;border:none;border-radius:50px;padding:1rem 2rem;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .3s,transform .2s;box-shadow:0 6px 20px rgba(10,36,99,0.2);width:100%;margin-top:.5rem}
+    .btn-submit:hover{opacity:.9;transform:translateY(-2px)}
+    footer{background:#060d1f;color:rgba(255,255,255,0.55);text-align:center;padding:2.5rem 1rem;font-size:.88rem}
+    footer strong{color:var(--menta)}
+    .footer-links{display:flex;justify-content:center;gap:2rem;margin-top:1rem;flex-wrap:wrap}
+    .footer-links a{color:rgba(255,255,255,0.4);text-decoration:none;font-size:.8rem;transition:color .3s}.footer-links a:hover{color:var(--menta)}
+    .whatsapp-btn{position:fixed;bottom:1.5rem;right:1.5rem;z-index:998;width:58px;height:58px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;font-size:1.7rem;text-decoration:none;box-shadow:0 4px 18px rgba(37,211,102,0.5);animation:pulso 2.5s ease-in-out infinite}
+    @keyframes pulso{0%,100%{box-shadow:0 4px 18px rgba(37,211,102,0.5)}50%{box-shadow:0 4px 35px rgba(37,211,102,0.8)}}
+    .reveal{opacity:0;transform:translateY(25px);transition:opacity .6s ease,transform .6s ease}.reveal.visible{opacity:1;transform:translateY(0)}
+    @media(max-width:768px){.nosotros-inner{grid-template-columns:1fr;gap:3rem}.nav-links{display:none}.precio-card.destacado{transform:scale(1)}.nosotros-badge{right:0;bottom:-10px}.form-row{grid-template-columns:1fr}}
+    .toast{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#1a8f6e;color:white;padding:1rem 2rem;border-radius:50px;font-weight:600;font-size:.95rem;opacity:0;transition:all .4s;z-index:9999;pointer-events:none;white-space:nowrap}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   </style>
 </head>
 <body>
 
-<nav>
-  <div class="logo">Odontología <span>Sánchez</span></div>
+<nav id="navbar">
+  <a href="#hero" class="logo">Odontología <span>Sánchez</span></a>
   <ul class="nav-links">
     <li><a href="#servicios">Servicios</a></li>
     <li><a href="#nosotros">Nosotros</a></li>
-    <li><a href="#testimonios">Opiniones</a></li>
     <li><a href="#precios">Precios</a></li>
-    <li><a href="#reserva">Reservar cita</a></li>
-    <li><a href="#contacto">Contacto</a></li>
+    <li><a href="#reserva">Reservar</a></li>
+    <li><a href="#contacto" class="btn-nav">Cita Online</a></li>
   </ul>
-  <a href="#reserva" class="btn-primary" style="padding:0.6rem 1.5rem;font-size:0.9rem;">Cita Online</a>
 </nav>
 
 <section id="hero">
-  <div class="bubbles">
-    <div class="bubble"></div><div class="bubble"></div>
-    <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-  </div>
+  <div class="bubble b1"></div><div class="bubble b2"></div><div class="bubble b3"></div><div class="bubble b4"></div>
   <div class="hero-content">
     <div class="hero-badge">🦷 Tu sonrisa, nuestra pasión</div>
     <h1 class="hero-title">La clínica dental<br>que <span>te va a enamorar</span></h1>
-    <p class="hero-sub">En Odontología Sánchez combinamos tecnología de última generación con el trato más cercano y humano.</p>
+    <p class="hero-sub">Tecnología de última generación con el trato más cercano y humano.<br>Porque mereces sonreír sin miedo.</p>
     <div class="hero-btns">
       <a href="#reserva" class="btn-primary">Reservar cita gratis</a>
       <a href="#servicios" class="btn-outline">Ver tratamientos</a>
     </div>
-    <div class="hero-stats">
+    <div style="display:flex;gap:3rem;justify-content:center;margin-top:4rem;flex-wrap:wrap;">
       <div class="stat"><div class="stat-num" data-target="2400">0</div><div class="stat-label">Pacientes felices</div></div>
       <div class="stat"><div class="stat-num" data-target="15">0</div><div class="stat-label">Años de experiencia</div></div>
       <div class="stat"><div class="stat-num" data-target="98">0</div><div class="stat-label">% satisfacción</div></div>
@@ -162,16 +143,12 @@
 </section>
 
 <section id="servicios">
-  <div class="center reveal">
-    <div class="section-tag">¿Qué hacemos?</div>
-    <h2 class="section-title">Tratamientos para cada sonrisa</h2>
-    <p class="section-sub">Desde una revisión rutinaria hasta la transformación completa de tu boca.</p>
-  </div>
+  <div class="center reveal"><div class="section-tag">¿Qué hacemos?</div><h2 class="section-title">Tratamientos para cada sonrisa</h2><p class="section-sub">Desde una revisión rutinaria hasta la transformación completa de tu boca.</p></div>
   <div class="servicios-grid">
     <div class="servicio-card reveal"><div class="servicio-icon">🦷</div><h3>Ortodoncia Invisible</h3><p>Alinea tus dientes sin que nadie lo note. Férulas transparentes personalizadas.</p><div class="servicio-precio">Desde 1.500 €</div></div>
-    <div class="servicio-card reveal"><div class="servicio-icon">✨</div><h3>Blanqueamiento Dental</h3><p>Dientes hasta 8 tonos más blancos en una sola sesión.</p><div class="servicio-precio">Desde 250 €</div></div>
-    <div class="servicio-card reveal"><div class="servicio-icon">🔧</div><h3>Implantes Dentales</h3><p>La solución definitiva. Implantes de titanio con garantía de por vida.</p><div class="servicio-precio">Desde 750 €/unidad</div></div>
-    <div class="servicio-card reveal"><div class="servicio-icon">👶</div><h3>Odontopediatría</h3><p>Ambiente divertido y sin miedo para los más pequeños.</p><div class="servicio-precio">Desde 40 €</div></div>
+    <div class="servicio-card reveal"><div class="servicio-icon">✨</div><h3>Blanqueamiento Dental</h3><p>Hasta 8 tonos más blancos en una sola sesión. Resultado inmediato y duradero.</p><div class="servicio-precio">Desde 250 €</div></div>
+    <div class="servicio-card reveal"><div class="servicio-icon">🔩</div><h3>Implantes Dentales</h3><p>La solución definitiva. Implantes de titanio con garantía de por vida.</p><div class="servicio-precio">Desde 750 €/unidad</div></div>
+    <div class="servicio-card reveal"><div class="servicio-icon">👶</div><h3>Odontopediatría</h3><p>Ambiente divertido y sin miedo para los más pequeños de la casa.</p><div class="servicio-precio">Desde 40 €</div></div>
     <div class="servicio-card reveal"><div class="servicio-icon">😌</div><h3>Sedación Consciente</h3><p>¿Miedo al dentista? Vivirás el tratamiento totalmente relajado.</p><div class="servicio-precio">Desde 100 €</div></div>
     <div class="servicio-card reveal"><div class="servicio-icon">💎</div><h3>Carillas de Porcelana</h3><p>La sonrisa perfecta. Diseño digital previo para ver el resultado antes.</p><div class="servicio-precio">Desde 350 €/unidad</div></div>
   </div>
@@ -179,7 +156,7 @@
 
 <section id="nosotros">
   <div class="nosotros-inner">
-    <div class="nosotros-visual reveal">
+    <div class="reveal" style="position:relative;">
       <div class="nosotros-img-box">🦷</div>
       <div class="nosotros-badge"><span>+2.400</span><small>pacientes satisfechos</small></div>
     </div>
@@ -188,33 +165,26 @@
       <h2 class="section-title">No somos una clínica más.<br>Somos tu clínica.</h2>
       <p class="section-sub">Cada paciente es único. Nos tomamos el tiempo necesario para ofrecerte la mejor solución.</p>
       <div class="features">
-        <div class="feature"><div class="feature-icon">🔬</div><div><h4>Tecnología de vanguardia</h4><p>Escáner 3D y diseño de sonrisa digital.</p></div></div>
+        <div class="feature"><div class="feature-icon">🔬</div><div><h4>Tecnología de vanguardia</h4><p>Escáner 3D, radiografía digital y diseño de sonrisa digital.</p></div></div>
         <div class="feature"><div class="feature-icon">💬</div><div><h4>Presupuesto sin sorpresas</h4><p>Primera visita gratuita. Siempre sabrás el coste exacto.</p></div></div>
-        <div class="feature"><div class="feature-icon">🕐</div><div><h4>Urgencias 24h</h4><p>Línea de urgencias disponible a cualquier hora.</p></div></div>
-        <div class="feature"><div class="feature-icon">💳</div><div><h4>Financiación sin intereses</h4><p>Paga a 12, 24 o 36 meses con 0% de interés.</p></div></div>
+        <div class="feature"><div class="feature-icon">🕐</div><div><h4>Urgencias 24h</h4><p>Línea de urgencias disponible a cualquier hora del día.</p></div></div>
+        <div class="feature"><div class="feature-icon">💳</div><div><h4>Financiación sin intereses</h4><p>Paga tus tratamientos a 12, 24 o 36 meses con 0% de interés.</p></div></div>
       </div>
     </div>
   </div>
 </section>
 
 <section id="testimonios">
-  <div class="center reveal">
-    <div class="section-tag">Lo que dicen de nosotros</div>
-    <h2 class="section-title" style="color:white;">Ellos ya tienen su sonrisa perfecta</h2>
-  </div>
+  <div class="center reveal"><div class="section-tag">Lo que dicen de nosotros</div><h2 class="section-title" style="color:white;">Ellos ya tienen su sonrisa perfecta</h2></div>
   <div class="testimonios-grid">
     <div class="testimonio reveal"><div class="estrellas">★★★★★</div><p>"Llevaba años con miedo al dentista y aquí me trataron con una amabilidad increíble. ¡No puedo dejar de sonreír!"</p><div class="testimonio-autor"><div class="avatar">ML</div><div class="autor-info"><strong>María López</strong><span>Carillas de porcelana</span></div></div></div>
-    <div class="testimonio reveal"><div class="estrellas">★★★★★</div><p>"Me hicieron 3 implantes y el proceso fue muchísimo más sencillo de lo que esperaba. El equipo es fantástico."</p><div class="testimonio-autor"><div class="avatar">JG</div><div class="autor-info"><strong>Javier García</strong><span>Implantes dentales</span></div></div></div>
+    <div class="testimonio reveal"><div class="estrellas">★★★★★</div><p>"Me hicieron 3 implantes y el proceso fue muchísimo más sencillo de lo esperado. El equipo es fantástico."</p><div class="testimonio-autor"><div class="avatar">JG</div><div class="autor-info"><strong>Javier García</strong><span>Implantes dentales</span></div></div></div>
     <div class="testimonio reveal"><div class="estrellas">★★★★★</div><p>"Mi hija de 8 años era muy nerviosa y aquí la trataron de maravilla. Ahora va encantada a sus revisiones."</p><div class="testimonio-autor"><div class="avatar">AM</div><div class="autor-info"><strong>Ana Martínez</strong><span>Odontopediatría</span></div></div></div>
   </div>
 </section>
 
 <section id="precios">
-  <div class="center reveal">
-    <div class="section-tag">Planes de revisión</div>
-    <h2 class="section-title">Transparencia total en precios</h2>
-    <p class="section-sub">Sin letras pequeñas. Sin sorpresas.</p>
-  </div>
+  <div class="center reveal"><div class="section-tag">Planes de revisión</div><h2 class="section-title">Transparencia total en precios</h2><p class="section-sub">Sin letras pequeñas. Sin sorpresas.</p></div>
   <div class="precios-grid">
     <div class="precio-card reveal"><div class="plan-nombre">Básico</div><div class="precio-num"><sup>€</sup>0</div><div class="precio-periodo">Primera visita</div><ul class="precio-lista"><li>Revisión completa</li><li>Diagnóstico por imagen</li><li>Presupuesto detallado</li><li>Sin compromiso</li></ul><a href="#reserva" class="btn-primary" style="display:block;text-align:center;">Reservar ahora</a></div>
     <div class="precio-card destacado reveal"><div class="plan-badge">Más popular</div><div class="plan-nombre">Mantenimiento Anual</div><div class="precio-num"><sup>€</sup>149</div><div class="precio-periodo">al año</div><ul class="precio-lista"><li>2 revisiones al año</li><li>2 limpiezas profundas</li><li>Radiografías incluidas</li><li>Descuentos en tratamientos</li><li>Urgencias prioritarias</li></ul><a href="#reserva" class="btn-primary" style="display:block;text-align:center;">Quiero este plan</a></div>
@@ -222,77 +192,91 @@
   </div>
 </section>
 
-<section id="reserva" style="background:#f0f4ff; padding:5rem 2rem; text-align:center;">
-  <div class="section-tag">Reserva en 1 minuto</div>
-  <h2 class="section-title">Elige tu hora directamente</h2>
-  <p class="section-sub" style="margin:0 auto 2rem;">Sin llamadas, sin esperas. Selecciona el día y hora que mejor te venga.</p>
-  <div style="max-width:900px;margin:0 auto;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(10,36,99,0.1);">
-    <iframe src="https://calendly.com/TU_USUARIO/primera-visita"
-      width="100%" height="650px" frameborder="0"
-      style="border:none;background:white;">
-    </iframe>
+<section id="reserva">
+  <div class="reserva-inner">
+    <div class="center reveal"><div class="section-tag">Reserva tu cita</div><h2 class="section-title">¿Cómo prefieres contactarnos?</h2><p class="section-sub">Primera visita completamente gratuita. Elige la forma que más te convenga.</p></div>
+    <div class="reserva-opciones">
+      <a href="https://wa.me/34600123456?text=Hola!%20Quiero%20pedir%20una%20cita%20en%20Odontolog%C3%ADa%20S%C3%A1nchez" class="reserva-card whatsapp reveal" target="_blank">
+        <span class="reserva-icono">💬</span><h3>WhatsApp</h3><p>La forma más rápida. Te respondemos en minutos.</p><strong>Abrir WhatsApp →</strong>
+      </a>
+      <a href="tel:+34912345678" class="reserva-card telefono reveal">
+        <span class="reserva-icono">📞</span><h3>Llamada directa</h3><p>Habla con nosotros y reserva tu cita al instante.</p><strong>91 234 56 78 →</strong>
+      </a>
+      <a href="#contacto" class="reserva-card email reveal">
+        <span class="reserva-icono">✉️</span><h3>Formulario</h3><p>Cuéntanos tu caso y te llamamos nosotros.</p><strong>Enviar mensaje →</strong>
+      </a>
+    </div>
+    <div class="center reveal" style="margin-top:3rem;">
+      <div class="section-tag">Horario de atención</div>
+      <div class="horario-grid">
+        <div class="horario-item"><div class="horario-dia">Lunes – Viernes</div><div class="horario-hora">9:00 – 21:00</div></div>
+        <div class="horario-item"><div class="horario-dia">Sábados</div><div class="horario-hora">9:00 – 14:00</div></div>
+        <div class="horario-item"><div class="horario-dia">Urgencias</div><div class="horario-hora">24 horas · 365 días</div></div>
+      </div>
+    </div>
   </div>
-  <p style="margin-top:1.5rem;color:#6b7280;font-size:0.9rem;">
-    ¿Prefieres llamar? <a href="tel:+34912345678" style="color:#0a2463;font-weight:700;">91 234 56 78</a>
-    &nbsp;·&nbsp; <a href="https://wa.me/34600123456" style="color:#25d366;font-weight:700;">💬 WhatsApp</a>
-  </p>
 </section>
 
 <section id="contacto">
   <div class="contacto-inner">
-    <div class="reveal">
-      <div class="section-tag">Hablemos</div>
-      <h2 class="section-title">También puedes escribirnos</h2>
-      <p class="section-sub">Te respondemos en menos de 1 hora en horario de clínica.</p>
-      <div class="contacto-info">
-        <div class="info-item"><div class="info-icon">📍</div><div><strong>Dirección</strong><span>Calle Gran Vía, 42 · Madrid, 28013</span></div></div>
-        <div class="info-item"><div class="info-icon">📞</div><div><strong>Teléfono</strong><span><a href="tel:+34912345678" style="color:inherit;">91 234 56 78</a> · Urgencias: <a href="tel:+34600123456" style="color:inherit;">600 123 456</a></span></div></div>
-        <div class="info-item"><div class="info-icon">🕐</div><div><strong>Horario</strong><span>Lunes–Viernes: 9:00–21:00 · Sábados: 9:00–14:00</span></div></div>
-        <div class="info-item"><div class="info-icon">✉️</div><div><strong>Email</strong><span>hola@odontologiasanchez.es</span></div></div>
+    <div class="center reveal"><div class="section-tag">Escíbenos</div><h2 class="section-title">Cuéntanos tu caso</h2><p class="section-sub">Rellena el formulario y te llamamos en menos de 1 hora en horario de clínica.</p></div>
+    <div class="contact-form reveal">
+      <div class="form-row">
+        <div class="form-group"><label>Nombre</label><input type="text" id="nombre" placeholder="Tu nombre" required /></div>
+        <div class="form-group"><label>Teléfono</label><input type="tel" id="telefono" placeholder="600 000 000" required /></div>
       </div>
+      <div class="form-group"><label>Tratamiento de interés</label>
+        <select id="tratamiento"><option>Primera visita gratuita</option><option>Ortodoncia</option><option>Implantes</option><option>Blanqueamiento</option><option>Carillas</option><option>Urgencia</option><option>Otro</option></select>
+      </div>
+      <div class="form-group"><label>Mensaje (opcional)</label><textarea id="mensaje" placeholder="Cuéntanos brevemente tu caso..."></textarea></div>
+      <button class="btn-submit" onclick="enviarWhatsApp()">Enviar por WhatsApp ✨</button>
     </div>
-    <div class="reveal">
-      <form action="https://formspree.io/f/xwvyqwwy" method="POST">
-        <div class="form-group"><label>Nombre completo</label><input type="text" name="nombre" placeholder="Tu nombre" required /></div>
-        <div class="form-group"><label>Teléfono</label><input type="tel" name="telefono" placeholder="600 000 000" required /></div>
-        <div class="form-group"><label>Tratamiento de interés</label><select name="tratamiento"><option>Primera visita gratuita</option><option>Ortodoncia</option><option>Implantes</option><option>Blanqueamiento</option><option>Carillas</option><option>Otro tratamiento</option></select></div>
-        <div class="form-group"><label>¿Cuándo prefieres la cita?</label><input type="date" name="fecha" /></div>
-        <div class="form-group"><label>Mensaje (opcional)</label><textarea name="mensaje" placeholder="Cuéntanos brevemente tu caso..."></textarea></div>
-        <button type="submit" class="btn-submit">Enviar solicitud ✨</button>
-      </form>
+    <div class="center reveal" style="margin-top:2rem;">
+      <p style="color:var(--gris);font-size:.85rem;">📍 Calle Gran Vía, 42 · Madrid 28013 &nbsp;·&nbsp; ✉️ hola@odontologiasanchez.es</p>
     </div>
   </div>
 </section>
 
 <footer>
-  <p><strong>Odontología Sánchez</strong> · Gran Vía 42, Madrid · Todos los derechos reservados © 2025</p>
-  <p style="margin-top:0.5rem;font-size:0.8rem;">Hecho con 🦷 y mucho cariño</p>
+  <p><strong>Odontología Sánchez</strong> · Gran Vía 42, Madrid · © 2025 Todos los derechos reservados</p>
+  <div class="footer-links">
+    <a href="#servicios">Servicios</a><a href="#precios">Precios</a><a href="#reserva">Reservar cita</a><a href="tel:+34912345678">91 234 56 78</a>
+  </div>
 </footer>
 
-<a href="https://wa.me/34600123456" class="whatsapp-btn" title="WhatsApp">💬</a>
+<a href="https://wa.me/34600123456?text=Hola!%20Quiero%20pedir%20una%20cita" class="whatsapp-btn" target="_blank">💬</a>
+<div class="toast" id="toast">¡Abriendo WhatsApp! Te llamamos pronto 🎉</div>
 
 <script>
-  function animarContadores() {
-    document.querySelectorAll('[data-target]').forEach(el => {
-      const target = parseInt(el.dataset.target);
-      const step = target / (2000 / 16);
-      let current = 0;
-      const timer = setInterval(() => {
-        current += step;
-        if (current >= target) { current = target; clearInterval(timer); }
-        el.textContent = Math.floor(current).toLocaleString('es-ES');
-        if (el.dataset.target === '98') el.textContent += '%';
-      }, 16);
+  function animarContadores(){
+    document.querySelectorAll('[data-target]').forEach(el=>{
+      const target=parseInt(el.dataset.target),step=target/(2000/16);let current=0;
+      const t=setInterval(()=>{
+        current=Math.min(current+step,target);
+        el.textContent=Math.floor(current).toLocaleString('es-ES');
+        if(el.dataset.target==='98')el.textContent+='%';
+        if(current>=target)clearInterval(t);
+      },16);
     });
   }
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
-  }, { threshold: 0.15 });
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-  window.addEventListener('load', () => setTimeout(animarContadores, 600));
-  window.addEventListener('scroll', () => {
-    document.querySelector('nav').style.padding = window.scrollY > 50 ? '0.8rem 2rem' : '1.2rem 2rem';
+  const obs=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible')}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+  window.addEventListener('load',()=>setTimeout(animarContadores,500));
+  window.addEventListener('scroll',()=>{
+    document.getElementById('navbar').style.padding=window.scrollY>60?'0.7rem 2rem':'1.2rem 2rem';
   });
+  function enviarWhatsApp(){
+    const nombre=document.getElementById('nombre').value.trim();
+    const telefono=document.getElementById('telefono').value.trim();
+    const tratamiento=document.getElementById('tratamiento').value;
+    const mensaje=document.getElementById('mensaje').value.trim();
+    if(!nombre||!telefono){alert('Por favor, rellena tu nombre y teléfono.');return;}
+    const texto=`Hola! Me llamo ${nombre} 👋\nTeléfono: ${telefono}\nTratamiento: ${tratamiento}${mensaje?'\nMensaje: '+mensaje:''}\n\nMe gustaría pedir una cita en Odontología Sánchez.`;
+    window.open('https://wa.me/34600123456?text='+encodeURIComponent(texto),'_blank');
+    const toast=document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'),3500);
+  }
 </script>
 </body>
 </html>
