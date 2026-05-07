@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Flask, request, Response, jsonify
-from flask_cors import CORS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +17,17 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+
+@app.after_request
+def add_cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return response
+
+@app.route("/contacto", methods=["OPTIONS"])
+def contacto_options():
+    return "", 204
 
 # ─── Credenciales ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
