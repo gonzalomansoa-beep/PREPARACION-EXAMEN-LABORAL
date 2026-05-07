@@ -53,16 +53,31 @@ def twiml_response(texto):
     return Response(xml_str, mimetype="text/xml")
 
 
+MENSAJE_ERROR = (
+    "Lo siento, estoy teniendo problemas técnicos en este momento. "
+    "Por favor llámanos al 628 493 012 o escríbenos a gonzalomansoa@gmail.com. 🦷"
+)
+
+
 def llamar_gemini(historial):
     payload = {
-        "system_instruction": {
-            "parts": [{"text": SYSTEM_PROMPT}]
-        },
+        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "contents": historial
     }
-    r = requests.post(GEMINI_URL, json=payload, timeout=10)
-    r.raise_for_status()
-    return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    for intento in range(2):
+        try:
+            r = requests.post(GEMINI_URL, json=payload, timeout=12)
+            if r.status_code == 429 and intento == 0:
+                time.sleep(3)
+                continue
+            r.raise_for_status()
+            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except requests.exceptions.Timeout:
+            if intento == 0:
+                time.sleep(1)
+                continue
+            raise
+    raise Exception("Sin respuesta tras reintentos")
 
 
 @app.route("/webhook", methods=["POST"])
@@ -83,15 +98,20 @@ def webhook():
 
     try:
         texto_respuesta = llamar_gemini(conversaciones[numero])
+        conversaciones[numero].append({
+            "role": "model",
+            "parts": [{"text": texto_respuesta}]
+        })
     except Exception:
-        texto_respuesta = "Lo siento, ha ocurrido un error. Por favor llama al 628 493 012. 🦷"
-
-    conversaciones[numero].append({
-        "role": "model",
-        "parts": [{"text": texto_respuesta}]
-    })
+        conversaciones[numero].pop()
+        texto_respuesta = MENSAJE_ERROR
 
     return twiml_response(texto_respuesta)
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return {"status": "ok", "modelo": "gemini-2.5-flash"}, 200
 
 
 @app.route("/", methods=["GET"])
