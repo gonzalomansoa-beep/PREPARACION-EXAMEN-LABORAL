@@ -387,28 +387,29 @@
         </div>
         <!-- Formulario -->
         <div>
-          <form id="formContacto" class="bg-white/5 rounded-2xl p-8 border border-white/10 space-y-5">
+          <form id="formContacto" name="contacto" data-netlify="true" class="bg-white/5 rounded-2xl p-8 border border-white/10 space-y-5">
+            <input type="hidden" name="form-name" value="contacto" />
             <div class="grid sm:grid-cols-2 gap-5">
               <div>
                 <label class="block text-gray-400 text-xs tracking-wider uppercase mb-2">Nombre *</label>
-                <input type="text" id="nombre" required placeholder="Tu nombre completo"
+                <input type="text" id="nombre" name="nombre" required placeholder="Tu nombre completo"
                        class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm transition-all" />
               </div>
               <div>
                 <label class="block text-gray-400 text-xs tracking-wider uppercase mb-2">Email *</label>
-                <input type="email" id="email" required placeholder="tu@email.com"
+                <input type="email" id="email" name="email" required placeholder="tu@email.com"
                        class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm transition-all" />
               </div>
             </div>
             <div class="grid sm:grid-cols-2 gap-5">
               <div>
                 <label class="block text-gray-400 text-xs tracking-wider uppercase mb-2">Teléfono</label>
-                <input type="tel" id="telefono" placeholder="6XX XXX XXX"
+                <input type="tel" id="telefono" name="telefono" placeholder="6XX XXX XXX"
                        class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm transition-all" />
               </div>
               <div>
                 <label class="block text-gray-400 text-xs tracking-wider uppercase mb-2">Tratamiento</label>
-                <select id="tratamiento" class="w-full bg-navy border border-gray-700 rounded-xl px-4 py-3 text-gray-300 text-sm transition-all">
+                <select id="tratamiento" name="tratamiento" class="w-full bg-navy border border-gray-700 rounded-xl px-4 py-3 text-gray-300 text-sm transition-all">
                   <option value="">Seleccionar...</option>
                   <option>Primera visita / Revisión</option>
                   <option>Implantes dentales</option>
@@ -423,7 +424,7 @@
             </div>
             <div>
               <label class="block text-gray-400 text-xs tracking-wider uppercase mb-2">Mensaje *</label>
-              <textarea id="mensaje" required rows="4" placeholder="Cuéntanos qué necesitas..."
+              <textarea id="mensaje" name="mensaje" required rows="4" placeholder="Cuéntanos qué necesitas..."
                         class="w-full bg-white/5 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm transition-all resize-none"></textarea>
             </div>
             <div id="formStatus" class="hidden rounded-xl px-4 py-3 text-sm"></div>
@@ -479,10 +480,7 @@
       });
     });
 
-    // Pre-warm Railway al cargar la página para evitar cold start en el formulario
-    fetch('/.netlify/functions/keepalive').catch(() => {});
-
-    // Formulario → Netlify Function (proxy sin CORS)
+    // Formulario — Netlify Forms como base (100% fiable) + email IA en segundo plano
     document.getElementById('formContacto').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -490,33 +488,37 @@
       const st  = document.getElementById('formStatus');
       btn.disabled = true; txt.textContent = 'Enviando...'; st.className = 'hidden';
 
+      const campos = {
+        nombre:      document.getElementById('nombre').value,
+        email:       document.getElementById('email').value,
+        telefono:    document.getElementById('telefono').value,
+        tratamiento: document.getElementById('tratamiento').value,
+        mensaje:     document.getElementById('mensaje').value,
+      };
+
       try {
-        const res = await fetch('/.netlify/functions/contacto', {
+        // 1. Netlify Forms — siempre funciona, sin depender de Railway
+        await fetch('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ 'form-name': 'contacto', ...campos }).toString(),
+        });
+
+        // Éxito inmediato
+        st.className = 'rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3';
+        st.textContent = '✅ Mensaje enviado. Recibirás respuesta personalizada en tu email en breve.';
+        this.reset();
+
+        // 2. Email IA vía Railway — en segundo plano, sin bloquear al usuario
+        fetch('/.netlify/functions/contacto', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nombre:      document.getElementById('nombre').value,
-            email:       document.getElementById('email').value,
-            telefono:    document.getElementById('telefono').value,
-            tratamiento: document.getElementById('tratamiento').value,
-            mensaje:     document.getElementById('mensaje').value,
-          }),
-        });
-        const data = await res.json();
-        if (data.ok) {
-          st.className = 'rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3';
-          st.textContent = '✅ Mensaje enviado. Recibirás respuesta personalizada en tu email en breve.';
-          this.reset();
-        } else {
-          throw new Error(data.error || 'Error desconocido');
-        }
+          body: JSON.stringify(campos),
+        }).catch(() => {});
+
       } catch (err) {
         st.className = 'rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3';
-        if (err.message && err.message.includes('tardó')) {
-          st.textContent = '⏳ ' + err.message + ' Llámanos al 628 493 012 o escríbenos por WhatsApp.';
-        } else {
-          st.textContent = '⚠️ Ha habido un problema al enviar. Inténtalo de nuevo o llámanos al 628 493 012.';
-        }
+        st.textContent = '⚠️ Ha habido un problema al enviar. Inténtalo de nuevo o llámanos al 628 493 012.';
       } finally {
         btn.disabled = false; txt.textContent = 'Enviar mensaje'; st.classList.remove('hidden');
       }
