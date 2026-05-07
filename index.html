@@ -479,8 +479,7 @@
       });
     });
 
-    // Formulario → Railway API
-    const RAILWAY = 'https://preparacion-examen-laboral-production.up.railway.app';
+    // Formulario → Netlify Function (proxy sin CORS)
     document.getElementById('formContacto').addEventListener('submit', async function(e) {
       e.preventDefault();
       const btn = document.getElementById('submitBtn');
@@ -492,7 +491,7 @@
       const timer = setTimeout(() => controller.abort(), 30000);
 
       try {
-        const res = await fetch(`${RAILWAY}/contacto`, {
+        const res = await fetch('/.netlify/functions/contacto', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
