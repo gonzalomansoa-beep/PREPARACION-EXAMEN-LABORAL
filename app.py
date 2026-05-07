@@ -4,6 +4,7 @@ import time
 import logging
 import smtplib
 import requests
+import threading
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -285,20 +286,20 @@ Redacta una respuesta de email breve (maximo 6 lineas), calida y profesional en 
             f"Carmen · Odontologia Sanchez · 628 493 012"
         )
 
-    # Aviso interno
-    enviar_email(
-        EMAIL_CLINICA,
-        f"Nuevo contacto web: {nombre} — {tratamiento or 'General'}",
-        f"Nombre: {nombre}\nEmail: {email}\nTelefono: {telefono}\nTratamiento: {tratamiento}\n\nMensaje:\n{mensaje}\n\n{'─'*40}\nRespuesta IA enviada:\n{respuesta_ia}",
-    )
+    # Emails en hilo de fondo para no bloquear la respuesta HTTP
+    def _enviar_emails():
+        enviar_email(
+            EMAIL_CLINICA,
+            f"Nuevo contacto web: {nombre} — {tratamiento or 'General'}",
+            f"Nombre: {nombre}\nEmail: {email}\nTelefono: {telefono}\nTratamiento: {tratamiento}\n\nMensaje:\n{mensaje}\n\n{'─'*40}\nRespuesta IA enviada:\n{respuesta_ia}",
+        )
+        exito = enviar_email(email, "Hemos recibido tu consulta — Odontologia Sanchez", respuesta_ia)
+        if exito:
+            log.info(f"✅ Auto-respuesta IA enviada a {email}")
+        else:
+            log.warning(f"⚠️  No se pudo enviar email a {email}")
 
-    # Auto-respuesta al paciente
-    exito = enviar_email(email, "Hemos recibido tu consulta — Odontologia Sanchez", respuesta_ia)
-    if exito:
-        log.info(f"✅ Auto-respuesta IA enviada a {email}")
-    else:
-        log.warning(f"⚠️  No se pudo enviar email a {email} (configura GMAIL_APP_PASSWORD)")
-
+    threading.Thread(target=_enviar_emails, daemon=True).start()
     return jsonify({"ok": True})
 
 
