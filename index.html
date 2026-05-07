@@ -487,10 +487,15 @@
       const txt = document.getElementById('btnText');
       const st  = document.getElementById('formStatus');
       btn.disabled = true; txt.textContent = 'Enviando...'; st.className = 'hidden';
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+
       try {
         const res = await fetch(`${RAILWAY}/contacto`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             nombre:      document.getElementById('nombre').value,
             email:       document.getElementById('email').value,
@@ -499,15 +504,21 @@
             mensaje:     document.getElementById('mensaje').value,
           }),
         });
+        clearTimeout(timer);
         const data = await res.json();
         if (data.ok) {
           st.className = 'rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-3';
           st.textContent = '✅ Mensaje enviado. Recibirás respuesta personalizada en tu email en breve.';
           this.reset();
         } else { throw new Error(data.error); }
-      } catch {
+      } catch (err) {
+        clearTimeout(timer);
         st.className = 'rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3';
-        st.textContent = '⚠️ Ha habido un problema. Llámanos al 628 493 012 o escríbenos por WhatsApp.';
+        if (err.name === 'AbortError') {
+          st.textContent = '⚠️ El servidor tardó demasiado. Tu mensaje puede haberse enviado igualmente. Si tienes dudas, llámanos al 628 493 012.';
+        } else {
+          st.textContent = '⚠️ Ha habido un problema. Llámanos al 628 493 012 o escríbenos por WhatsApp.';
+        }
       } finally {
         btn.disabled = false; txt.textContent = 'Enviar mensaje'; st.classList.remove('hidden');
       }
