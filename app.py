@@ -29,11 +29,11 @@ def contacto_options():
 
 # ─── Credenciales ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL   = "gemini-2.0-flash"
-GEMINI_URL     = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-)
+GEMINI_MODELS  = ["gemini-2.5-flash", "gemini-2.0-flash"]
+GEMINI_MODEL   = GEMINI_MODELS[0]
+
+def _gemini_url(model):
+    return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
 
 CALENDAR_ID       = "548fdbd91d1fe5f545da2d8c0c4cfebbcbf30c749a3527c9b25a79baaf9d25e2@group.calendar.google.com"
 GOOGLE_CREDS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
@@ -144,21 +144,25 @@ def llamar_gemini(historial: list, system: str = None, timeout: int = 12) -> str
     payload = {
         "system_instruction": {"parts": [{"text": system or SYSTEM_PROMPT}]},
         "contents": historial,
-        "generationConfig": {"temperature": 0.75, "maxOutputTokens": 350},
+        "generationConfig": {"temperature": 0.75, "maxOutputTokens": 350, "thinkingConfig": {"thinkingBudget": 0}},
     }
-    for intento in range(2):
-        try:
-            r = requests.post(GEMINI_URL, json=payload, timeout=timeout)
-            if r.status_code == 429 and intento == 0:
-                time.sleep(2)
-                continue
-            r.raise_for_status()
-            return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        except requests.exceptions.Timeout:
-            if intento == 0:
-                continue
-            raise
-    raise RuntimeError("Gemini sin respuesta tras reintentos")
+    for model in GEMINI_MODELS:
+        for intento in range(2):
+            try:
+                r = requests.post(_gemini_url(model), json=payload, timeout=timeout)
+                if r.status_code == 429 and intento == 0:
+                    time.sleep(2)
+                    continue
+                if r.status_code == 429:
+                    log.warning(f"Modelo {model} con rate limit, probando siguiente...")
+                    break
+                r.raise_for_status()
+                return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            except requests.exceptions.Timeout:
+                if intento == 0:
+                    continue
+                raise
+    raise RuntimeError("Todos los modelos Gemini sin respuesta")
 
 
 def extraer_datos_cita(texto_confirmacion: str, historial: list) -> dict | None:
@@ -352,7 +356,7 @@ def health():
     email_status = "ok" if BREVO_API_KEY else "pendiente BREVO_API_KEY"
     return {
         "status":   "ok",
-        "modelo":   GEMINI_MODEL,
+        "modelos":  GEMINI_MODELS,
         "calendar": "conectado" if cal_ok else "pendiente",
         "email":    email_status,
     }, 200
