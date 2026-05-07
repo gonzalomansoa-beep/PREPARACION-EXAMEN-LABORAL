@@ -282,11 +282,15 @@ Tono: email personal de alguien que ha leído de verdad el mensaje y le importa 
         )
     except Exception as exc:
         log.error(f"Error generando respuesta IA para email: {exc}")
+        tratamiento_ref = f" sobre {tratamiento}" if tratamiento else ""
         respuesta_ia = (
-            f"Hola {nombre},\n\nMuchas gracias por contactar con Odontologia Sanchez.\n\n"
-            f"Hemos recibido tu consulta y nos pondremos en contacto contigo en breve. "
-            f"Si necesitas atencion urgente, llamanos al 628 493 012.\n\n"
-            f"Carmen · Odontologia Sanchez · 628 493 012"
+            f"Hola {nombre},\n\n"
+            f"Gracias por escribirnos{tratamiento_ref}. Hemos recibido tu mensaje y te responderemos en detalle lo antes posible.\n\n"
+            f"Si necesitas atención urgente, no dudes en llamarnos al 628 493 012 o contestar a este mismo email. Estaremos encantados de ayudarte.\n\n"
+            f"¡Hasta pronto!\n\n"
+            f"Carmen\n"
+            f"Odontología Sánchez · Gran Vía 42, Madrid\n"
+            f"📞 628 493 012 | Primera visita gratuita"
         )
 
     # Emails en hilo de fondo para no bloquear la respuesta HTTP
