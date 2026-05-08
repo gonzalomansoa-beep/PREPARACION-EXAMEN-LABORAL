@@ -2,6 +2,7 @@ import os
 import re
 import json
 import time
+import sqlite3
 import logging
 import requests
 import threading
@@ -131,7 +132,48 @@ Normas de estilo:
 - Nunca des diagnósticos ni precios exactos como garantía
 - En situaciones de urgencia o dolor, prioriza siempre la empatía"""
 
-conversaciones: dict = {}
+# ─── Conversaciones persistentes en SQLite ────────────────────────────────────
+DB_PATH = "/tmp/conversaciones.db"
+_db_lock = threading.Lock()
+
+def _init_db():
+    with sqlite3.connect(DB_PATH) as con:
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS conversaciones (
+                numero TEXT PRIMARY KEY,
+                historial TEXT NOT NULL,
+                updated_at REAL NOT NULL
+            )
+        """)
+        con.commit()
+
+_init_db()
+
+def conv_get(numero: str) -> list:
+    with _db_lock, sqlite3.connect(DB_PATH) as con:
+        row = con.execute("SELECT historial, updated_at FROM conversaciones WHERE numero=?", (numero,)).fetchone()
+        if not row:
+            return []
+        # Borrar si la conversación lleva más de 24h sin actividad
+        if time.time() - row[1] > 86400:
+            con.execute("DELETE FROM conversaciones WHERE numero=?", (numero,))
+            con.commit()
+            return []
+        return json.loads(row[0])
+
+def conv_set(numero: str, historial: list):
+    with _db_lock, sqlite3.connect(DB_PATH) as con:
+        con.execute(
+            "INSERT OR REPLACE INTO conversaciones (numero, historial, updated_at) VALUES (?,?,?)",
+            (numero, json.dumps(historial, ensure_ascii=False), time.time())
+        )
+        con.commit()
+
+def conv_pop_last(numero: str):
+    historial = conv_get(numero)
+    if historial:
+        historial.pop()
+        conv_set(numero, historial)
 
 
 def llamar_gemini(historial: list, system: str = None, timeout: int = 15) -> str:
@@ -369,18 +411,20 @@ def webhook():
 
     log.info(f"📱 [{numero}] → {mensaje_usuario[:80]}")
 
-    if numero not in conversaciones:
-        conversaciones[numero] = []
-
-    conversaciones[numero].append({"role": "user", "parts": [{"text": mensaje_usuario}]})
+    historial = conv_get(numero)
+    historial.append({"role": "user", "parts": [{"text": mensaje_usuario}]})
+    if len(historial) > 40:
+        historial = historial[-40:]
+    conv_set(numero, historial)
 
     try:
-        texto_respuesta = llamar_gemini(conversaciones[numero])
-        conversaciones[numero].append({"role": "model", "parts": [{"text": texto_respuesta}]})
+        texto_respuesta = llamar_gemini(historial)
+        historial.append({"role": "model", "parts": [{"text": texto_respuesta}]})
+        conv_set(numero, historial)
 
         if "✅ ¡Cita confirmada!" in texto_respuesta:
             log.info(f"🗓️  Cita detectada para {numero} — extrayendo datos...")
-            datos = extraer_datos_cita(texto_respuesta, conversaciones[numero])
+            datos = extraer_datos_cita(texto_respuesta, historial)
             if datos and datos.get("fecha_iso") and datos.get("hora_iso"):
                 crear_evento_calendario(
                     datos.get("nombre", "Paciente"),
@@ -393,7 +437,7 @@ def webhook():
 
     except Exception as exc:
         log.warning(f"⚠️  Gemini no disponible para {numero}: {exc} — usando fallback inteligente")
-        conversaciones[numero].pop()
+        conv_pop_last(numero)
         texto_respuesta = respuesta_whatsapp_fallback(mensaje_usuario)
 
     return twiml_response(texto_respuesta)
