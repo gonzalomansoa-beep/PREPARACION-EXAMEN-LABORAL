@@ -180,11 +180,7 @@ def llamar_gemini(historial: list, system: str = None, timeout: int = 15) -> str
     payload = {
         "system_instruction": {"parts": [{"text": system or SYSTEM_PROMPT}]},
         "contents": historial,
-        "generationConfig": {
-            "temperature": 0.8,
-            "maxOutputTokens": 400,
-            "thinkingConfig": {"thinkingBudget": 0},
-        },
+        "generationConfig": {"temperature": 0.8, "maxOutputTokens": 400},
     }
     last_error = None
     for model in GEMINI_MODELS:
@@ -199,8 +195,15 @@ def llamar_gemini(historial: list, system: str = None, timeout: int = 15) -> str
                     last_error = "429"
                     break
                 r.raise_for_status()
-                texto = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                log.info(f"✅ Gemini respondió con {model}")
+                # Concatena todos los parts de texto (ignora partes de pensamiento vacías)
+                parts = r.json()["candidates"][0]["content"]["parts"]
+                texto = "".join(
+                    p.get("text", "") for p in parts
+                    if p.get("text", "").strip() and not p.get("thought", False)
+                ).strip()
+                if not texto:
+                    raise ValueError("Respuesta vacía de Gemini")
+                log.info(f"✅ Gemini [{model}] respondió ({len(texto)} chars)")
                 return texto
             except requests.exceptions.Timeout:
                 log.warning(f"⚠️  {model} timeout intento {intento+1}")
