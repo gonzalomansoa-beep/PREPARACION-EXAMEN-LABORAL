@@ -247,71 +247,108 @@ Solo JSON, sin markdown."""
 
 
 # ─── Respuestas inteligentes de fallback ──────────────────────────────────────
-def respuesta_whatsapp_fallback(mensaje: str) -> str:
-    """Respuesta contextual cuando Gemini no está disponible."""
+def _extraer_nombre_historial(historial: list) -> str | None:
+    """Busca el nombre del paciente en el historial de conversación."""
+    texto_completo = " ".join(
+        m["parts"][0]["text"] for m in historial if m["role"] == "user"
+    ).lower()
+    # Patrones: "me llamo X", "soy X", "mi nombre es X"
+    for patron in [r"me llamo ([a-záéíóúüñ]+ ?[a-záéíóúüñ]*)", r"soy ([a-záéíóúüñ]+ ?[a-záéíóúüñ]*)", r"mi nombre es ([a-záéíóúüñ]+ ?[a-záéíóúüñ]*)"]:
+        match = re.search(patron, texto_completo, re.IGNORECASE)
+        if match:
+            nombre = match.group(1).strip().title()
+            if len(nombre) > 2:
+                return nombre
+    return None
+
+def _hay_contexto_cita(historial: list) -> dict:
+    """Detecta si la conversación ya avanzó hacia una cita."""
+    texto = " ".join(m["parts"][0]["text"] for m in historial).lower()
+    return {
+        "nombre": _extraer_nombre_historial(historial),
+        "tiene_dia": any(d in texto for d in ["lunes", "martes", "miércoles", "miercoles", "jueves", "viernes", "sábado", "sabado", "mañana", "pasado"]),
+        "tiene_hora": any(h in texto for h in ["las ", ":00", ":30", "mañana", "tarde", "mediodía"]),
+        "tiene_tratamiento": any(t in texto for t in ["implante", "ortodoncia", "blanquea", "limpieza", "revisión", "revision", "endodoncia", "carilla"]),
+    }
+
+def respuesta_whatsapp_fallback(mensaje: str, historial: list = None) -> str:
+    """Respuesta contextual con memoria del hilo cuando Gemini no está disponible."""
     msg = mensaje.lower()
+    ctx = _hay_contexto_cita(historial or [])
+    nombre = ctx["nombre"]
+    saludo_nombre = f", {nombre}" if nombre else ""
 
     urgencia = any(w in msg for w in ["urgencia", "urgente", "dolor", "duele", "accidente", "roto", "rota", "sangra", "hinchado"])
-    cita     = any(w in msg for w in ["cita", "reservar", "pedir", "quiero", "cuando", "disponible", "hueco"])
-    precio   = any(w in msg for w in ["precio", "cuanto", "coste", "cuesta", "tarifa", "presupuesto"])
+    cita     = any(w in msg for w in ["cita", "reservar", "pedir", "quiero", "cuando", "disponible", "hueco", "martes", "lunes", "jueves", "viernes", "mañana"])
+    precio   = any(w in msg for w in ["precio", "cuanto", "cuesta", "coste", "tarifa", "presupuesto"])
     implante = any(w in msg for w in ["implante", "implantes", "diente perdido", "falta", "faltan"])
-    ortod    = any(w in msg for w in ["ortodoncia", "brackets", "invisalign", "dientes torcidos", "alineadores"])
-    blanq    = any(w in msg for w in ["blanquear", "blanqueamiento", "whiten", "color", "amarillo"])
+    ortod    = any(w in msg for w in ["ortodoncia", "brackets", "invisalign", "alineadores"])
+    blanq    = any(w in msg for w in ["blanquear", "blanqueamiento", "color", "amarillo"])
     nino     = any(w in msg for w in ["niño", "niña", "hijo", "hija", "infantil", "pediatria"])
-    saludo   = any(w in msg for w in ["hola", "buenas", "buenos", "hello", "info", "información"])
+    hora     = any(w in msg for w in ["las ", ":00", ":30", "once", "diez", "doce", "nueve"])
+
+    # Si ya hay contexto de cita en curso, continuar con esa línea
+    if historial and len(historial) > 2:
+        if ctx["tiene_dia"] and not ctx["tiene_hora"] and not hora:
+            return (
+                f"Perfecto{saludo_nombre}! ¿A qué hora te vendría mejor? "
+                f"Tenemos disponible de 9:00 a 21:00 de lunes a viernes, y los sábados hasta las 14:00. 🦷"
+            )
+        if ctx["tiene_dia"] and hora:
+            return (
+                f"¡Anotado{saludo_nombre}! Para confirmar la cita necesito solo un momento. "
+                f"Llámanos al 628 493 012 o escríbenos de nuevo en unos minutos y lo cerramos. 🦷"
+            )
+        if nombre and not ctx["tiene_dia"]:
+            return (
+                f"Encantada, {nombre}. ¿Qué día te vendría bien? "
+                f"Disponemos de citas de lunes a viernes de 9:00 a 21:00 y sábados de 9:00 a 14:00. 🦷"
+            )
 
     if urgencia:
         return (
-            "¡Hola! Entiendo que tienes una urgencia. En Odontología Sánchez atendemos urgencias 24h. "
+            f"¡Hola{saludo_nombre}! Entiendo que tienes una urgencia. "
+            "En Odontología Sánchez atendemos urgencias 24h. "
             "Llámanos ahora al 628 493 012 y te atendemos de inmediato. 🦷"
         )
     if implante and precio:
         return (
-            "¡Hola! Los implantes dentales en nuestra clínica tienen un precio orientativo desde 750€/unidad. "
-            "El proceso es muy cómodo, con anestesia local para que no sientas nada. "
-            "¿Quieres que te hagamos una valoración gratuita? Dime tu nombre y te reservo una visita. 🦷"
+            f"¡Hola{saludo_nombre}! Los implantes están desde 750€/unidad con anestesia local, "
+            "sin dolor. ¿Quieres una valoración gratuita? Dime tu nombre y cuándo te viene bien. 🦷"
         )
-    if ortod and precio:
+    if ortod:
         return (
-            "¡Hola! Invisalign (ortodoncia invisible) tiene un precio orientativo desde 1.500€, "
-            "dependiendo del caso. Es ideal para adultos porque es casi imperceptible. "
-            "¿Te apetece una primera visita gratuita para ver qué necesitas? Dime tu nombre. 🦷"
+            f"¡Hola{saludo_nombre}! Invisalign desde 1.500€ — casi invisible, sin brackets. "
+            "Primera visita gratuita. ¿Quieres que te reserve una consulta? 🦷"
         )
     if blanq:
         return (
-            "¡Hola! El blanqueamiento dental profesional está desde 250€ y los resultados se notan desde la primera sesión. "
-            "¿Quieres que te reservemos una consulta gratuita para valorarlo? Dime tu nombre y cuándo te viene bien. 🦷"
+            f"¡Hola{saludo_nombre}! Blanqueamiento desde 250€, resultados desde la primera sesión. "
+            "¿Te reservo una consulta gratuita? Dime tu nombre y cuándo te viene bien. 🦷"
         )
     if nino:
         return (
-            "¡Hola! Atendemos a los más pequeños desde 40€. Tenemos un equipo especializado en odontopediatría "
-            "y sabemos cómo hacer que la visita al dentista sea una experiencia tranquila para ellos. "
-            "¿Quieres pedir cita? Dime el nombre del niño y cuándo os viene mejor. 🦷"
+            f"¡Hola{saludo_nombre}! Atendemos niños desde 40€ con especialistas en odontopediatría. "
+            "Primera visita gratuita. ¿Quieres pedir cita? 🦷"
         )
     if precio:
         return (
-            "¡Hola! Estos son nuestros precios orientativos:\n"
-            "• Revisión + limpieza: desde 60€\n"
-            "• Implantes: desde 750€/unidad\n"
-            "• Invisalign: desde 1.500€\n"
-            "• Blanqueamiento: desde 250€\n"
-            "• Carillas: desde 350€\n\n"
-            "La primera visita es siempre GRATUITA. ¿Te reservo una? 🦷"
+            f"¡Hola{saludo_nombre}! Precios orientativos:\n"
+            "• Revisión + limpieza: desde 60€\n• Implantes: desde 750€\n"
+            "• Invisalign: desde 1.500€\n• Blanqueamiento: desde 250€\n\n"
+            "Primera visita GRATUITA. ¿Te reservo una? 🦷"
         )
-    if cita:
+    if cita or hora:
         return (
-            "¡Hola! Con mucho gusto te reservo una cita. "
-            "Estamos disponibles lunes a viernes de 9:00 a 21:00 y sábados de 9:00 a 14:00. "
-            "¿Me dices tu nombre y qué día te viene mejor? 🦷"
+            f"¡Hola{saludo_nombre}! Con mucho gusto. "
+            "Disponemos de citas lunes a viernes 9:00-21:00 y sábados 9:00-14:00. "
+            "¿Me confirmas tu nombre y el día? 🦷"
         )
-    if saludo:
-        return (
-            "¡Hola! Bienvenido a Odontología Sánchez. Soy Carmen y estoy aquí para ayudarte. "
-            "La primera visita es siempre gratuita. ¿En qué puedo ayudarte hoy? 🦷"
-        )
+    # Si es el primer mensaje o un saludo
     return (
-        "¡Hola! Soy Carmen de Odontología Sánchez. Puedo ayudarte con información sobre tratamientos, "
-        "precios o reservar una cita (primera visita gratuita). ¿Qué necesitas? 🦷"
+        "¡Hola! Soy Carmen de Odontología Sánchez. "
+        "Puedo ayudarte con información, precios o reservar tu cita (primera visita gratuita). "
+        "¿En qué puedo ayudarte? 🦷"
     )
 
 
@@ -439,9 +476,10 @@ def webhook():
         log.info(f"📤 [{numero}] ← {texto_respuesta[:80]}")
 
     except Exception as exc:
-        log.warning(f"⚠️  Gemini no disponible para {numero}: {exc} — usando fallback inteligente")
+        log.warning(f"⚠️  Gemini no disponible para {numero}: {exc} — usando fallback con contexto")
         conv_pop_last(numero)
-        texto_respuesta = respuesta_whatsapp_fallback(mensaje_usuario)
+        historial_actual = conv_get(numero)
+        texto_respuesta = respuesta_whatsapp_fallback(mensaje_usuario, historial_actual)
 
     return twiml_response(texto_respuesta)
 
