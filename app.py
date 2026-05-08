@@ -466,12 +466,30 @@ def webhook():
             log.info(f"🗓️  Cita detectada para {numero} — extrayendo datos...")
             datos = extraer_datos_cita(texto_respuesta, historial)
             if datos and datos.get("fecha_iso") and datos.get("hora_iso"):
-                crear_evento_calendario(
-                    datos.get("nombre", "Paciente"),
-                    datos.get("tratamiento", "Consulta"),
-                    datos["fecha_iso"],
-                    datos["hora_iso"],
-                )
+                nombre_cita     = datos.get("nombre", "Paciente")
+                tratamiento_cita = datos.get("tratamiento", "Consulta")
+                fecha_cita      = datos["fecha_iso"]
+                hora_cita       = datos["hora_iso"]
+
+                def _gestionar_cita():
+                    cal_ok = crear_evento_calendario(nombre_cita, tratamiento_cita, fecha_cita, hora_cita)
+                    fecha_legible = datetime.fromisoformat(fecha_cita).strftime("%A %d de %B de %Y")
+                    cuerpo_clinica = (
+                        f"Nueva cita confirmada via WhatsApp\n\n"
+                        f"Paciente: {nombre_cita}\n"
+                        f"Tratamiento: {tratamiento_cita}\n"
+                        f"Fecha: {fecha_legible}\n"
+                        f"Hora: {hora_cita}\n"
+                        f"WhatsApp: {numero}\n\n"
+                        f"{'✅ Evento creado en Google Calendar' if cal_ok else '⚠️ No se pudo crear en Calendar — comprueba GOOGLE_CREDENTIALS_JSON'}"
+                    )
+                    enviar_email(
+                        EMAIL_CLINICA,
+                        f"🦷 Nueva cita WhatsApp: {nombre_cita} — {fecha_legible} {hora_cita}",
+                        cuerpo_clinica,
+                    )
+
+                threading.Thread(target=_gestionar_cita, daemon=True).start()
 
         log.info(f"📤 [{numero}] ← {texto_respuesta[:80]}")
 
